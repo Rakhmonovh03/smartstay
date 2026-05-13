@@ -244,7 +244,57 @@ CHAT_HTML = """
 </body>
 </html>
 """
+MANAGER_PASSWORD = "smartstay2025"
 
+LOGIN_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartStay — Вход</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:sans-serif; background:#0a0a0a; color:white; height:100vh; display:flex; align-items:center; justify-content:center; }
+        .box { background:#1a1a1a; border-radius:16px; padding:48px; width:360px; text-align:center; }
+        .logo { color:#C9A84C; font-size:28px; font-weight:900; margin-bottom:8px; }
+        .sub { color:#666; font-size:14px; margin-bottom:32px; }
+        input { width:100%; background:#2a2a2a; border:1px solid #333; border-radius:8px; padding:14px; color:white; font-size:15px; outline:none; margin-bottom:16px; text-align:center; }
+        input:focus { border-color:#C9A84C; }
+        button { width:100%; background:#C9A84C; color:#000; border:none; border-radius:8px; padding:14px; font-size:15px; font-weight:600; cursor:pointer; }
+        button:hover { background:#E8C96A; }
+        .error { color:#E05555; font-size:13px; margin-top:12px; display:none; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="logo">🏨 SmartStay</div>
+        <div class="sub">Панель менеджера</div>
+        <input type="password" id="pwd" placeholder="Введите пароль" onkeypress="if(event.key==='Enter') login()">
+        <button onclick="login()">Войти</button>
+        <div class="error" id="err">❌ Неверный пароль</div>
+    </div>
+    <script>
+        function login() {
+            const pwd = document.getElementById('pwd').value;
+            fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({password: pwd})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    window.location.href = '/dashboard';
+                } else {
+                    document.getElementById('err').style.display = 'block';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+"""
 # Дашборд для менеджера
 DASHBOARD_HTML = """
 <!DOCTYPE html>
@@ -413,9 +463,30 @@ DASHBOARD_HTML = """
 def home():
     return CHAT_HTML
 
+from fastapi import Request, Response as FastAPIResponse
+from fastapi.responses import RedirectResponse
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page():
+    return LOGIN_HTML
+
+@app.post("/api/login")
+def api_login(data: dict, response: FastAPIResponse):
+    if data.get("password") == MANAGER_PASSWORD:
+        response.set_cookie("manager_auth", "yes", max_age=86400)
+        return {"ok": True}
+    return {"ok": False}
+
 @app.get("/dashboard", response_class=HTMLResponse)
-def dashboard():
+def dashboard(request: Request):
+    if request.cookies.get("manager_auth") != "yes":
+        return RedirectResponse("/login")
     return DASHBOARD_HTML
+
+@app.get("/api/logout")
+def logout(response: FastAPIResponse):
+    response.delete_cookie("manager_auth")
+    return RedirectResponse("/login")
 
 @app.get("/api/messages")
 def api_messages():
