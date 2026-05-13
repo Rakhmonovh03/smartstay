@@ -81,17 +81,37 @@ def init_db():
             room TEXT,
             role TEXT,
             message TEXT,
-            created_at TEXT
+            created_at TEXT,
+            priority TEXT DEFAULT 'normal',
+            is_read INTEGER DEFAULT 0
         )
     """)
     conn.commit()
     conn.close()
 
+URGENT_KEYWORDS = [
+    "сломан", "сломался", "не работает", "авария", "пожар", "помогите",
+    "срочно", "плохо", "болит", "врач", "горячей воды нет", "нет воды",
+    "затопило", "сломана", "broken", "emergency", "help", "urgent",
+    "doctor", "fire", "acil", "yardım", "bozuk", "çalışmıyor",
+    "кран", "огонь", "горит", "течет", "течёт", "воды нет",
+    "холодно", "жарко", "шум", "запах", "дым", "не открывается",
+    "застрял", "лифт", "упал", "травма", "кровь"
+]
+
+def get_priority(message):
+    msg_lower = message.lower()
+    for keyword in URGENT_KEYWORDS:
+        if keyword in msg_lower:
+            return "urgent"
+    return "normal"
+
 def save_message(room, role, message):
+    priority = get_priority(message) if role == "user" else "normal"
     conn = sqlite3.connect("smartstay.db")
     conn.execute(
-        "INSERT INTO messages (room, role, message, created_at) VALUES (?, ?, ?, ?)",
-        (room, role, message, datetime.now().strftime("%Y-%m-%d %H:%M"))
+        "INSERT INTO messages (room, role, message, created_at, priority, is_read) VALUES (?, ?, ?, ?, ?, ?)",
+        (room, role, message, datetime.now().strftime("%Y-%m-%d %H:%M"), priority, 0)
     )
     conn.commit()
     conn.close()
@@ -99,10 +119,27 @@ def save_message(room, role, message):
 def get_messages():
     conn = sqlite3.connect("smartstay.db")
     rows = conn.execute(
-        "SELECT room, role, message, created_at FROM messages ORDER BY id DESC LIMIT 100"
+        """SELECT room, role, message, created_at, priority, is_read 
+        FROM messages ORDER BY 
+        CASE priority WHEN 'urgent' THEN 0 ELSE 1 END,
+        id DESC LIMIT 100"""
     ).fetchall()
     conn.close()
     return rows
+
+def get_unread_count():
+    conn = sqlite3.connect("smartstay.db")
+    count = conn.execute(
+        "SELECT COUNT(*) FROM messages WHERE is_read=0 AND role='user'"
+    ).fetchone()[0]
+    conn.close()
+    return count
+
+def mark_all_read():
+    conn = sqlite3.connect("smartstay.db")
+    conn.execute("UPDATE messages SET is_read=1")
+    conn.commit()
+    conn.close()
 
 init_db()
 
@@ -220,30 +257,58 @@ DASHBOARD_HTML = """
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family: sans-serif; background:#0a0a0a; color:white; padding:32px; }
         h1 { color:#C9A84C; font-size:24px; margin-bottom:8px; }
-        .subtitle { color:#666; font-size:14px; margin-bottom:32px; }
-        .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:32px; }
+        .subtitle { color:#666; font-size:14px; margin-bottom:24px; }
+        .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:32px; }
         .stat { background:#1a1a1a; border-radius:12px; padding:24px; text-align:center; border-bottom:3px solid #C9A84C; }
+        .stat.urgent { border-bottom-color:#E05555; }
         .stat .num { font-size:40px; font-weight:900; color:#C9A84C; }
+        .stat.urgent .num { color:#E05555; }
         .stat .label { font-size:13px; color:#666; margin-top:8px; }
+        .btns { display:flex; gap:12px; margin-bottom:24px; }
+        .btn { padding:10px 24px; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; border:none; }
+        .btn-gold { background:#C9A84C; color:#000; }
+        .btn-dark { background:#1a1a1a; color:#fff; border:1px solid #333; }
         table { width:100%; border-collapse:collapse; background:#1a1a1a; border-radius:12px; overflow:hidden; }
         th { background:#C9A84C; color:#000; padding:14px 16px; text-align:left; font-size:13px; }
         td { padding:14px 16px; border-bottom:1px solid #222; font-size:14px; }
         tr:last-child td { border-bottom:none; }
         tr:hover td { background:#222; }
-        .role-user { color:#C9A84C; font-weight:500; }
-        .role-bot { color:#4CAF50; }
+        tr.urgent-row td { background:rgba(224,85,85,0.08); }
+        tr.urgent-row:hover td { background:rgba(224,85,85,0.15); }
+        .badge { display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:500; }
+        .badge-urgent { background:rgba(224,85,85,0.2); color:#E05555; border:1px solid rgba(224,85,85,0.4); }
+        .badge-normal { background:rgba(76,175,80,0.2); color:#4CAF50; border:1px solid rgba(76,175,80,0.4); }
+        .badge-bot { background:rgba(201,168,76,0.2); color:#C9A84C; border:1px solid rgba(201,168,76,0.4); }
         .room-tag { background:#222; padding:4px 10px; border-radius:20px; font-size:12px; color:#C9A84C; }
-        .refresh { background:#C9A84C; color:#000; border:none; padding:10px 24px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:500; margin-bottom:24px; }
+        .unread-badge { background:#E05555; color:white; border-radius:50%; padding:2px 8px; font-size:12px; margin-left:8px; }
+        .filter-bar { display:flex; gap:8px; margin-bottom:16px; }
+        .filter { padding:6px 16px; border-radius:20px; font-size:12px; cursor:pointer; border:1px solid #333; background:#1a1a1a; color:#fff; }
+        .filter.active { background:#C9A84C; color:#000; border-color:#C9A84C; }
     </style>
 </head>
 <body>
-    <h1>🏨 SmartStay — Панель менеджера</h1>
+    <h1>🏨 SmartStay — Панель менеджера <span id="unreadBadge"></span></h1>
     <p class="subtitle">Все запросы гостей в реальном времени</p>
-    <button class="refresh" onclick="location.reload()">🔄 Обновить</button>
+
     <div class="stats" id="stats"></div>
+
+    <div class="btns">
+        <button class="btn btn-gold" onclick="location.reload()">🔄 Обновить</button>
+        <button class="btn btn-dark" onclick="markRead()">✅ Отметить все прочитанными</button>
+        <button class="btn btn-dark" onclick="window.open('/qrcodes')">📱 QR Коды</button>
+    </div>
+
+    <div class="filter-bar">
+        <button class="filter active" onclick="filterMessages('all', this)">Все</button>
+        <button class="filter" onclick="filterMessages('urgent', this)">🔴 Срочные</button>
+        <button class="filter" onclick="filterMessages('user', this)">👤 Гости</button>
+        <button class="filter" onclick="filterMessages('bot', this)">🤖 AI</button>
+    </div>
+
     <table>
         <thead>
             <tr>
+                <th>Приоритет</th>
                 <th>Номер</th>
                 <th>Кто</th>
                 <th>Сообщение</th>
@@ -252,26 +317,66 @@ DASHBOARD_HTML = """
         </thead>
         <tbody id="tbody"></tbody>
     </table>
+
     <script>
+        let allData = [];
+        let currentFilter = 'all';
+
         fetch('/api/messages')
             .then(r => r.json())
             .then(data => {
+                allData = data;
+                renderTable(data);
+
+                const urgent = data.filter(m => m.priority === 'urgent').length;
                 const rooms = new Set(data.map(m => m.room)).size;
                 const userMsgs = data.filter(m => m.role === 'user').length;
+                const unread = data.filter(m => m.is_read === 0 && m.role === 'user').length;
+
+                if (unread > 0) {
+                    document.getElementById('unreadBadge').innerHTML = 
+                        `<span class="unread-badge">${unread} новых</span>`;
+                }
+
                 document.getElementById('stats').innerHTML = `
                     <div class="stat"><div class="num">${data.length}</div><div class="label">Всего сообщений</div></div>
                     <div class="stat"><div class="num">${rooms}</div><div class="label">Активных номеров</div></div>
                     <div class="stat"><div class="num">${userMsgs}</div><div class="label">Запросов гостей</div></div>
+                    <div class="stat urgent"><div class="num">${urgent}</div><div class="label">🔴 Срочных</div></div>
                 `;
-                document.getElementById('tbody').innerHTML = data.map(m => `
-                    <tr>
-                        <td><span class="room-tag">🚪 ${m.room}</span></td>
-                        <td class="${m.role === 'user' ? 'role-user' : 'role-bot'}">${m.role === 'user' ? '👤 Гость' : '🤖 AI'}</td>
-                        <td>${m.message}</td>
-                        <td>${m.created_at}</td>
-                    </tr>
-                `).join('');
             });
+
+        function renderTable(data) {
+            document.getElementById('tbody').innerHTML = data.map(m => `
+                <tr class="${m.priority === 'urgent' ? 'urgent-row' : ''}">
+                    <td>
+                        ${m.priority === 'urgent' 
+                            ? '<span class="badge badge-urgent">🔴 Срочно</span>' 
+                            : '<span class="badge badge-normal">🟢 Норм</span>'}
+                    </td>
+                    <td><span class="room-tag">🚪 ${m.room}</span></td>
+                    <td>${m.role === 'user' 
+                        ? '<span class="badge badge-bot">👤 Гость</span>' 
+                        : '<span class="badge badge-bot">🤖 AI</span>'}</td>
+                    <td>${m.message}</td>
+                    <td style="color:#666">${m.created_at}</td>
+                </tr>
+            `).join('');
+        }
+
+        function filterMessages(filter, btn) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if (filter === 'all') renderTable(allData);
+            else if (filter === 'urgent') renderTable(allData.filter(m => m.priority === 'urgent'));
+            else renderTable(allData.filter(m => m.role === filter));
+        }
+
+        function markRead() {
+            fetch('/api/mark-read', {method:'POST'})
+                .then(() => location.reload());
+        }
     </script>
 </body>
 </html>
@@ -288,7 +393,11 @@ def dashboard():
 @app.get("/api/messages")
 def api_messages():
     rows = get_messages()
-    return [{"room": r[0], "role": r[1], "message": r[2], "created_at": r[3]} for r in rows]
+    return [{"room": r[0], "role": r[1], "message": r[2], "created_at": r[3], "priority": r[4], "is_read": r[5]} for r in rows]
+@app.post("/api/mark-read")
+def mark_read():
+    mark_all_read()
+    return {"status": "ok"}
 
 @app.post("/chat")
 async def chat(data: dict):
