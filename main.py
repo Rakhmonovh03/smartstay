@@ -376,7 +376,34 @@ DASHBOARD_HTML = """
         function markRead() {
             fetch('/api/mark-read', {method:'POST'})
                 .then(() => location.reload());
+                
         }
+        // Автообновление каждые 3 секунды
+        setInterval(() => {
+            fetch('/api/messages')
+                .then(r => r.json())
+                .then(data => {
+                    allData = data;
+                    if (currentFilter === 'all') renderTable(data);
+                    else if (currentFilter === 'urgent') renderTable(data.filter(m => m.priority === 'urgent'));
+                    else renderTable(data.filter(m => m.role === currentFilter));
+
+                    const urgent = data.filter(m => m.priority === 'urgent').length;
+                    const rooms = new Set(data.map(m => m.room)).size;
+                    const userMsgs = data.filter(m => m.role === 'user').length;
+                    const unread = data.filter(m => m.is_read === 0 && m.role === 'user').length;
+
+                    document.getElementById('unreadBadge').innerHTML = unread > 0 
+                        ? `<span class="unread-badge">${unread} новых</span>` : '';
+
+                    document.getElementById('stats').innerHTML = `
+                        <div class="stat"><div class="num">${data.length}</div><div class="label">Всего сообщений</div></div>
+                        <div class="stat"><div class="num">${rooms}</div><div class="label">Активных номеров</div></div>
+                        <div class="stat"><div class="num">${userMsgs}</div><div class="label">Запросов гостей</div></div>
+                        <div class="stat urgent"><div class="num">${urgent}</div><div class="label">🔴 Срочных</div></div>
+                    `;
+                });
+        }, 3000);
     </script>
 </body>
 </html>
