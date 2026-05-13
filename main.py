@@ -413,7 +413,7 @@ async def chat(data: dict):
         with client.messages.stream(
             model="claude-sonnet-4-5",
             max_tokens=500,
-            system=HOTEL_INFO,
+            system=HOTEL_INFO + f"\n\nГость находится в номере: {room}. Ты уже знаешь номер — не спрашивай его снова.",
             messages=history
         ) as stream:
             for text in stream.text_stream:
