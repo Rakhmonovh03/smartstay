@@ -11,15 +11,65 @@ app = FastAPI()
 client = Anthropic()
 
 HOTEL_INFO = """
-Ты AI консьерж отеля SmartStay в Анталии.
-Отвечай на любом языке на котором пишет гость.
-Ты помогаешь с:
-- Информацией об отеле (спа, рестораны, бассейн, часы работы)
-- Заказом еды в номер
-- Записью в спа
-- Уборкой номера
-- Любыми вопросами гостя
-Будь вежливым и дружелюбным. Отвечай коротко и по делу.
+Ты AI консьерж отеля SmartStay Resort 5* в Анталии, Турция.
+Отвечай ТОЛЬКО на языке на котором пишет гость — русский, турецкий, английский, немецкий, арабский.
+Отвечай коротко, дружелюбно и по делу.
+
+=== ИНФОРМАЦИЯ ОБ ОТЕЛЕ ===
+
+🏊 БАССЕЙНЫ:
+- Главный бассейн: 08:00 - 22:00
+- Крытый бассейн: 07:00 - 23:00
+- Детский бассейн: 09:00 - 20:00
+
+🍽️ РЕСТОРАНЫ:
+- Главный ресторан (шведский стол): завтрак 07:00-10:00, обед 12:30-14:30, ужин 19:00-21:30
+- Ресторан à la carte "Akdeniz": 19:00-23:00, требуется резервация
+- Снэк-бар у бассейна: 10:00-18:00
+- Ночной бар: 21:00-02:00
+
+☕ БАРЫ:
+- Лобби-бар: 09:00-24:00
+- Пляжный бар: 10:00-19:00
+- Бар у бассейна: 10:00-20:00
+
+💆 СПА И ФИТНЕС:
+- СПА центр: 09:00-21:00
+- Турецкая баня (хаммам): 10:00-20:00
+- Фитнес зал: 07:00-22:00
+- Запись в СПА: через этот чат или ресепшн (добавочный 9)
+
+🏖️ ПЛЯЖ:
+- Пляж: 08:00-20:00
+- Лежаки и зонтики: бесплатно для гостей
+
+🎭 АНИМАЦИЯ И РАЗВЛЕЧЕНИЯ:
+- Дневная анимация у бассейна: 10:00-18:00
+- Вечернее шоу: каждый день в 21:00 в амфитеатре
+- Детский клуб: 09:00-18:00 (дети 4-12 лет)
+
+🛎️ УСЛУГИ:
+- Ресепшн: 24/7, добавочный 0
+- Заказ еды в номер: 07:00-23:00, добавочный 8
+- Уборка номера: каждый день до 14:00
+- Дополнительная уборка: через этот чат
+- Трансфер в аэропорт: добавочный 5
+- Аренда авто: добавочный 6
+
+🏥 ЭКСТРЕННЫЕ КОНТАКТЫ:
+- Скорая помощь: 112
+- Врач отеля: добавочный 7 (24/7)
+- Пожарная: 110
+
+📍 ЛОКАЦИЯ:
+- Отель находится в Белеке, Анталия
+- До аэропорта Анталии: 35 км, ~30 минут
+
+=== ПРАВИЛА ===
+- Если гость просит уборку или услугу — скажи "Передаю вашу просьбу персоналу, ожидайте"
+- Если гость злится или есть проблема — посочувствуй и скажи что менеджер свяжется в течение 5 минут
+- Если не знаешь ответ — скажи "Уточню у персонала и отвечу вам"
+- Никогда не выдумывай информацию которой нет выше
 """
 
 # База данных
@@ -264,3 +314,59 @@ async def chat(data: dict):
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+import qrcode
+import io
+from fastapi.responses import Response
+
+@app.get("/qr/{room}")
+def get_qr(room: str):
+    url = f"https://web-production-467dd.up.railway.app?room={room}"
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="#C9A84C", back_color="#0a0a0a")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return Response(content=buf.getvalue(), media_type="image/png")
+
+@app.get("/qrcodes", response_class=HTMLResponse)
+def qrcodes():
+    rooms = list(range(101, 111)) + list(range(201, 211)) + list(range(301, 311))
+    cards = ""
+    for room in rooms:
+        cards += f"""
+        <div class="card">
+            <img src="/qr/{room}" alt="QR {room}">
+            <div class="room">🚪 Номер {room}</div>
+            <div class="hint">Сканируй для помощи</div>
+        </div>
+        """
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <title>QR Коды — SmartStay</title>
+        <style>
+            * {{ margin:0; padding:0; box-sizing:border-box; }}
+            body {{ background:#0a0a0a; color:white; font-family:sans-serif; padding:40px; }}
+            h1 {{ color:#C9A84C; font-size:28px; margin-bottom:8px; }}
+            p {{ color:#666; margin-bottom:32px; font-size:14px; }}
+            .grid {{ display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:20px; }}
+            .card {{ background:#1a1a1a; border-radius:12px; padding:24px; text-align:center; border:1px solid #333; }}
+            .card img {{ width:140px; height:140px; border-radius:8px; }}
+            .room {{ font-size:16px; font-weight:700; color:#C9A84C; margin-top:12px; }}
+            .hint {{ font-size:12px; color:#666; margin-top:4px; }}
+            .print-btn {{ background:#C9A84C; color:#000; border:none; padding:12px 32px; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; margin-bottom:32px; }}
+        </style>
+    </head>
+    <body>
+        <h1>🏨 QR Коды для номеров</h1>
+        <p>Распечатай и повесь в каждый номер. Гость сканирует — попадает в чат.</p>
+        <button class="print-btn" onclick="window.print()">🖨️ Распечатать все</button>
+        <div class="grid">{cards}</div>
+    </body>
+    </html>
+    """
