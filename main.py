@@ -426,6 +426,144 @@ EDIT_HTML = """
 </html>
 """
 
+ADMIN_PASSWORD = "admin_smartstay_2026"
+
+ADMIN_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartStay — Admin</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:sans-serif; background:#0a0a0a; color:white; padding:32px; }
+        h1 { color:#C9A84C; font-size:24px; margin-bottom:4px; }
+        .sub { color:#666; font-size:14px; margin-bottom:32px; }
+        .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:32px; }
+        .stat { background:#1a1a1a; border-radius:12px; padding:24px; text-align:center; border-bottom:3px solid #C9A84C; }
+        .stat .num { font-size:40px; font-weight:900; color:#C9A84C; }
+        .stat .label { font-size:13px; color:#666; margin-top:8px; }
+        table { width:100%; border-collapse:collapse; background:#1a1a1a; border-radius:12px; overflow:hidden; margin-bottom:32px; }
+        th { background:#C9A84C; color:#000; padding:14px 16px; text-align:left; font-size:13px; }
+        td { padding:14px 16px; border-bottom:1px solid #222; font-size:14px; }
+        tr:last-child td { border-bottom:none; }
+        tr:hover td { background:#1f1f1f; }
+        .badge { display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; }
+        .badge-active { background:rgba(76,175,80,0.2); color:#4CAF50; border:1px solid rgba(76,175,80,0.3); }
+        .badge-new { background:rgba(201,168,76,0.2); color:#C9A84C; border:1px solid rgba(201,168,76,0.3); }
+        .link { color:#C9A84C; text-decoration:none; font-size:13px; }
+        .link:hover { text-decoration:underline; }
+        .btn { padding:8px 16px; border-radius:6px; font-size:13px; cursor:pointer; border:none; }
+        .btn-gold { background:#C9A84C; color:#000; }
+        .btn-dark { background:#2a2a2a; color:#fff; border:1px solid #333; }
+        .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:32px; }
+        .revenue { color:#4CAF50; font-weight:600; }
+    </style>
+</head>
+<body>
+    <div class="header-row">
+        <div>
+            <h1>🏨 SmartStay — Super Admin</h1>
+            <div class="sub">Tüm otellerin yönetimi</div>
+        </div>
+        <div style="display:flex; gap:12px">
+            <button class="btn btn-gold" onclick="location.reload()">🔄 Yenile</button>
+            <button class="btn btn-dark" onclick="window.location.href='/register'">➕ Yeni Otel</button>
+        </div>
+    </div>
+
+    <div class="stats" id="stats">
+        <div class="stat"><div class="num" id="totalHotels">...</div><div class="label">Toplam Otel</div></div>
+        <div class="stat"><div class="num" id="totalMessages">...</div><div class="label">Toplam Mesaj</div></div>
+        <div class="stat"><div class="num" id="monthRevenue">...</div><div class="label">Aylık Gelir ($)</div></div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Otel Adı</th>
+                <th>Slug</th>
+                <th>Mesajlar</th>
+                <th>Kayıt Tarihi</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+    </table>
+
+    <script>
+        fetch('/api/admin/hotels')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('totalHotels').textContent = data.hotels.length;
+                document.getElementById('totalMessages').textContent = data.total_messages;
+                document.getElementById('monthRevenue').textContent = (data.hotels.length * 800).toLocaleString();
+
+                document.getElementById('tbody').innerHTML = data.hotels.map((h, i) => `
+                    <tr>
+                        <td style="color:#666">${i + 1}</td>
+                        <td><b>${h.name}</b></td>
+                        <td><span style="color:#666; font-size:12px">${h.slug}</span></td>
+                        <td><span class="badge badge-active">${h.message_count} mesaj</span></td>
+                        <td style="color:#666; font-size:13px">${h.created_at}</td>
+                        <td style="display:flex; gap:8px">
+                            <a href="/hotel/${h.slug}" target="_blank" class="link">👤 Chat</a>
+                            <a href="/hotel/${h.slug}/dashboard" target="_blank" class="link">📊 Panel</a>
+                        </td>
+                    </tr>
+                `).join('');
+            });
+    </script>
+</body>
+</html>
+"""
+
+ADMIN_LOGIN_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartStay — Admin Giriş</title>
+    <meta charset="utf-8">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:sans-serif; background:#0a0a0a; color:white; height:100vh; display:flex; align-items:center; justify-content:center; }
+        .box { background:#1a1a1a; border-radius:16px; padding:48px; width:360px; text-align:center; }
+        .logo { color:#C9A84C; font-size:28px; font-weight:900; margin-bottom:8px; }
+        .sub { color:#666; font-size:14px; margin-bottom:32px; }
+        input { width:100%; background:#2a2a2a; border:1px solid #333; border-radius:8px; padding:14px; color:white; font-size:15px; outline:none; margin-bottom:16px; text-align:center; }
+        input:focus { border-color:#C9A84C; }
+        button { width:100%; background:#C9A84C; color:#000; border:none; border-radius:8px; padding:14px; font-size:15px; font-weight:600; cursor:pointer; }
+        .error { color:#E05555; font-size:13px; margin-top:12px; display:none; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="logo">🔐 Admin</div>
+        <div class="sub">SmartStay Super Admin</div>
+        <input type="password" id="pwd" placeholder="Admin şifresi" onkeypress="if(event.key==='Enter') login()">
+        <button onclick="login()">Giriş</button>
+        <div class="error" id="err">❌ Yanlış şifre</div>
+    </div>
+    <script>
+        function login() {
+            fetch('/api/admin/login', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({password: document.getElementById('pwd').value})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) window.location.href = '/admin';
+                else document.getElementById('err').style.display = 'block';
+            });
+        }
+    </script>
+</body>
+</html>
+"""
+
 
 
 MANAGER_PASSWORD = "smartstay2025"
@@ -1108,6 +1246,40 @@ def hotel_update(slug: str, data: dict, request: Request):
         return {"ok": False, "error": "Ad ve bilgiler gerekli"}
     update_hotel(slug, name, info, password if password else None)
     return {"ok": True}
+
+
+@app.get("/admin/login", response_class=HTMLResponse)
+def admin_login_page():
+    return ADMIN_LOGIN_HTML
+
+@app.post("/api/admin/login")
+def api_admin_login(data: dict, response: FastAPIResponse):
+    if data.get("password") == ADMIN_PASSWORD:
+        response.set_cookie("admin_auth", "yes", max_age=86400)
+        return {"ok": True}
+    return {"ok": False}
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_panel(request: Request):
+    if request.cookies.get("admin_auth") != "yes":
+        return RedirectResponse("/admin/login")
+    return ADMIN_HTML
+
+@app.get("/api/admin/hotels")
+def api_admin_hotels(request: Request):
+    if request.cookies.get("admin_auth") != "yes":
+        return {"error": "Unauthorized"}
+    hotels = get_all_hotels()
+    conn = sqlite3.connect("smartstay.db")
+    total_messages = conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
+    for hotel in hotels:
+        count = conn.execute(
+            "SELECT COUNT(*) FROM messages WHERE hotel_slug=?",
+            (hotel["slug"],)
+        ).fetchone()[0]
+        hotel["message_count"] = count
+    conn.close()
+    return {"hotels": hotels, "total_messages": total_messages}
 
 
 
