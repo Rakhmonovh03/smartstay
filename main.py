@@ -7,6 +7,21 @@ import json, os, sqlite3
 
 load_dotenv()
 
+
+TELEGRAM_TOKEN = "8644783291:AAFdATLmPL3vityqTyvSfhLi0yRMDwbl8Oc"
+TELEGRAM_CHAT_ID = "916372970"
+
+async def send_telegram(message: str):
+    try:
+        import urllib.request
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        data = json.dumps({"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML"}).encode()
+        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"Telegram error: {e}")
+
+
 app = FastAPI()
 client = Anthropic()
 
@@ -72,12 +87,26 @@ HOTEL_INFO = """
 - Никогда не выдумывай информацию которой нет выше
 """
 
-# База данных
 def init_db():
     conn = sqlite3.connect("smartstay.db")
+    
+    # Таблица отелей
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS hotels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            slug TEXT UNIQUE,
+            name TEXT,
+            password TEXT,
+            info TEXT,
+            created_at TEXT
+        )
+    """)
+    
+    # Таблица сообщений
     conn.execute("""
         CREATE TABLE IF NOT EXISTS messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hotel_slug TEXT,
             room TEXT,
             role TEXT,
             message TEXT,
@@ -86,6 +115,7 @@ def init_db():
             is_read INTEGER DEFAULT 0
         )
     """)
+    
     conn.commit()
     conn.close()
 
@@ -134,6 +164,62 @@ def get_unread_count():
     ).fetchone()[0]
     conn.close()
     return count
+
+def create_hotel(slug, name, password, info):
+    conn = sqlite3.connect("smartstay.db")
+    conn.execute(
+        "INSERT INTO hotels (slug, name, password, info, created_at) VALUES (?, ?, ?, ?, ?)",
+        (slug, name, password, info, datetime.now().strftime("%Y-%m-%d %H:%M"))
+    )
+    conn.commit()
+    conn.close()
+
+def get_hotel(slug):
+    conn = sqlite3.connect("smartstay.db")
+    row = conn.execute(
+        "SELECT slug, name, password, info FROM hotels WHERE slug=?", (slug,)
+    ).fetchone()
+    conn.close()
+    if row:
+        return {"slug": row[0], "name": row[1], "password": row[2], "info": row[3]}
+    return None
+
+def get_all_hotels():
+    conn = sqlite3.connect("smartstay.db")
+    rows = conn.execute(
+        "SELECT slug, name, created_at FROM hotels ORDER BY id DESC"
+    ).fetchall()
+    conn.close()
+    return [{"slug": r[0], "name": r[1], "created_at": r[2]} for r in rows]
+
+def get_hotel_messages(slug):
+    conn = sqlite3.connect("smartstay.db")
+    rows = conn.execute(
+        """SELECT room, role, message, created_at, priority, is_read 
+        FROM messages WHERE hotel_slug=?
+        ORDER BY CASE priority WHEN 'urgent' THEN 0 ELSE 1 END, id DESC LIMIT 100""",
+        (slug,)
+    ).fetchall()
+    conn.close()
+    return rows
+
+def save_hotel_message(slug, room, role, message):
+    priority = get_priority(message) if role == "user" else "normal"
+    conn = sqlite3.connect("smartstay.db")
+    conn.execute(
+        "INSERT INTO messages (hotel_slug, room, role, message, created_at, priority, is_read) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (slug, room, role, message, datetime.now().strftime("%Y-%m-%d %H:%M"), priority, 0)
+    )
+    conn.commit()
+    conn.close()
+    return priority
+
+def mark_hotel_read(slug):
+    conn = sqlite3.connect("smartstay.db")
+    conn.execute("UPDATE messages SET is_read=1 WHERE hotel_slug=?", (slug,))
+    conn.commit()
+    conn.close()
+
 
 def mark_all_read():
     conn = sqlite3.connect("smartstay.db")
@@ -203,10 +289,12 @@ CHAT_HTML = """
             botDiv.textContent = '...';
             document.getElementById('messages').appendChild(botDiv);
 
-            const res = await fetch('/chat', {
+            const slug = window.location.pathname.split('/')[2] || '';
+            const chatUrl = slug ? '/hotel/' + slug + '/chat' : '/chat';
+            const res = await fetch(chatUrl, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({message: text, history: messages.slice(0,-1), room: room})
+                body: JSON.stringify({message: text, history: messages.slice(0,-1), room: room, slug: slug})
             });
 
             const reader = res.body.getReader();
@@ -244,7 +332,229 @@ CHAT_HTML = """
 </body>
 </html>
 """
+
+
+EDIT_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartStay — Настройки</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:sans-serif; background:#0a0a0a; color:white; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px 20px; }
+        .box { background:#1a1a1a; border-radius:16px; padding:48px; width:100%; max-width:560px; }
+        .logo { color:#C9A84C; font-size:22px; font-weight:900; margin-bottom:4px; }
+        .sub { color:#666; font-size:14px; margin-bottom:32px; }
+        .field { margin-bottom:20px; }
+        label { display:block; font-size:13px; color:#888; margin-bottom:8px; letter-spacing:1px; }
+        input, textarea { width:100%; background:#2a2a2a; border:1px solid #333; border-radius:8px; padding:14px; color:white; font-size:14px; outline:none; font-family:sans-serif; }
+        input:focus, textarea:focus { border-color:#C9A84C; }
+        textarea { height:300px; resize:vertical; }
+        .btns { display:flex; gap:12px; margin-top:8px; }
+        .btn { flex:1; padding:14px; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; }
+        .btn-gold { background:#C9A84C; color:#000; }
+        .btn-dark { background:#2a2a2a; color:#fff; border:1px solid #333; }
+        .success { color:#4CAF50; font-size:13px; margin-top:12px; display:none; }
+        .error { color:#E05555; font-size:13px; margin-top:12px; display:none; }
+        .back { color:#C9A84C; font-size:13px; text-decoration:none; display:inline-block; margin-bottom:24px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <a class="back" href="javascript:history.back()">← Panele dön</a>
+        <div class="logo">🏨 SmartStay AI</div>
+        <div class="sub">Otel bilgilerini düzenle</div>
+
+        <div class="field">
+            <label>OTELİN ADI</label>
+            <input type="text" id="name" placeholder="Otel adı">
+        </div>
+
+        <div class="field">
+            <label>OTEL BİLGİLERİ</label>
+            <textarea id="info" placeholder="Otel bilgileri..."></textarea>
+        </div>
+
+        <div class="field">
+            <label>YENİ ŞİFRE (değiştirmek istemiyorsanız boş bırakın)</label>
+            <input type="password" id="password" placeholder="Yeni şifre">
+        </div>
+
+        <div class="btns">
+            <button class="btn btn-gold" onclick="save()">💾 Kaydet</button>
+            <button class="btn btn-dark" onclick="window.location.href=dashUrl">📊 Panele Git</button>
+        </div>
+        <div class="success" id="success">✅ Kaydedildi!</div>
+        <div class="error" id="error"></div>
+    </div>
+
+    <script>
+        const slug = window.location.pathname.split('/')[2];
+        const dashUrl = '/hotel/' + slug + '/dashboard';
+
+        fetch('/api/hotel/' + slug + '/info')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('name').value = data.name || '';
+                document.getElementById('info').value = data.info || '';
+            });
+
+        async function save() {
+            const name = document.getElementById('name').value.trim();
+            const info = document.getElementById('info').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            const res = await fetch('/api/hotel/' + slug + '/update', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, info, password})
+            });
+
+            const data = await res.json();
+            if (data.ok) {
+                document.getElementById('success').style.display = 'block';
+                setTimeout(() => document.getElementById('success').style.display = 'none', 3000);
+            } else {
+                document.getElementById('error').textContent = '❌ ' + data.error;
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
+"""
+
+
+
 MANAGER_PASSWORD = "smartstay2025"
+
+REGISTER_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartStay — Регистрация отеля</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:sans-serif; background:#0a0a0a; color:white; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px 20px; }
+        .box { background:#1a1a1a; border-radius:16px; padding:48px; width:100%; max-width:560px; }
+        .logo { color:#C9A84C; font-size:24px; font-weight:900; margin-bottom:8px; }
+        .sub { color:#666; font-size:14px; margin-bottom:40px; }
+        .field { margin-bottom:20px; }
+        label { display:block; font-size:13px; color:#888; margin-bottom:8px; letter-spacing:1px; }
+        input, textarea { width:100%; background:#2a2a2a; border:1px solid #333; border-radius:8px; padding:14px; color:white; font-size:14px; outline:none; font-family:sans-serif; }
+        input:focus, textarea:focus { border-color:#C9A84C; }
+        textarea { height:200px; resize:vertical; }
+        .hint { font-size:12px; color:#555; margin-top:6px; }
+        .btn { width:100%; background:#C9A84C; color:#000; border:none; border-radius:8px; padding:16px; font-size:15px; font-weight:600; cursor:pointer; margin-top:8px; }
+        .btn:hover { background:#E8C96A; }
+        .error { color:#E05555; font-size:13px; margin-top:12px; display:none; }
+        .success { display:none; text-align:center; padding:32px; }
+        .success h2 { color:#C9A84C; font-size:24px; margin-bottom:16px; }
+        .success p { color:#888; font-size:14px; margin-bottom:24px; line-height:1.7; }
+        .link-box { background:#2a2a2a; border:1px solid rgba(201,168,76,0.3); padding:14px; border-radius:8px; color:#C9A84C; font-size:13px; word-break:break-all; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div id="form-view">
+            <div class="logo">🏨 SmartStay AI</div>
+            <div class="sub">Otelinizi sisteme kaydedin — 2 dakikada hazır</div>
+
+            <div class="field">
+                <label>OTELİN ADI</label>
+                <input type="text" id="name" placeholder="Örn: Rixos Premium Belek">
+            </div>
+
+            <div class="field">
+                <label>OTELİN KISALTMASI (URL için)</label>
+                <input type="text" id="slug" placeholder="Örn: rixos-premium">
+                <div class="hint">Sadece küçük harf ve tire kullanın. Örn: grand-hotel, sunrise-resort</div>
+            </div>
+
+            <div class="field">
+                <label>YÖNETİCİ ŞİFRESİ</label>
+                <input type="password" id="password" placeholder="Güvenli bir şifre girin">
+            </div>
+
+            <div class="field">
+                <label>OTELİN BİLGİLERİ</label>
+                <textarea id="info" placeholder="Otelin bilgilerini yazın:
+- Havuz saatleri
+- Restoran saatleri  
+- Spa saatleri
+- Önemli telefon numaraları
+- Diğer hizmetler
+
+Bu bilgileri AI misafir sorularını yanıtlamak için kullanacak."></textarea>
+                <div class="hint">Ne kadar detaylı yazarsanız AI o kadar iyi yanıt verir</div>
+            </div>
+
+            <button class="btn" onclick="register()">Oteli Kaydet →</button>
+            <div class="error" id="err"></div>
+        </div>
+
+        <div class="success" id="success-view">
+            <h2>✅ Otel Kaydedildi!</h2>
+            <p>Sisteminiz hazır. Aşağıdaki linkleri kaydedin:</p>
+            <p style="color:#888; margin-bottom:8px; font-size:13px;">👤 Misafir linki:</p>
+            <div class="link-box" id="guest-link"></div>
+            <br>
+            <p style="color:#888; margin-bottom:8px; font-size:13px;">📊 Yönetici paneli:</p>
+            <div class="link-box" id="manager-link"></div>
+            <br><br>
+            <button class="btn" onclick="window.location.href=document.getElementById('manager-link').textContent">Panele Git →</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('name').addEventListener('input', function() {
+            const slug = this.value.toLowerCase()
+                .replace(/[^a-z0-9\\s-]/g, '')
+                .replace(/\\s+/g, '-')
+                .replace(/-+/g, '-');
+            document.getElementById('slug').value = slug;
+        });
+
+        async function register() {
+            const name = document.getElementById('name').value.trim();
+            const slug = document.getElementById('slug').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const info = document.getElementById('info').value.trim();
+            const err = document.getElementById('err');
+
+            if (!name || !slug || !password || !info) {
+                err.textContent = '❌ Lütfen tüm alanları doldurun';
+                err.style.display = 'block';
+                return;
+            }
+
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, slug, password, info})
+            });
+
+            const data = await res.json();
+
+            if (data.ok) {
+                const base = window.location.origin;
+                document.getElementById('guest-link').textContent = base + '/hotel/' + slug;
+                document.getElementById('manager-link').textContent = base + '/hotel/' + slug + '/dashboard';
+                document.getElementById('form-view').style.display = 'none';
+                document.getElementById('success-view').style.display = 'block';
+            } else {
+                err.textContent = '❌ ' + (data.error || 'Hata oluştu');
+                err.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
+"""
 
 LOGIN_HTML = """
 <!DOCTYPE html>
@@ -277,15 +587,18 @@ LOGIN_HTML = """
     <script>
         function login() {
             const pwd = document.getElementById('pwd').value;
-            fetch('/api/login', {
+            const slug = window.location.pathname.split('/')[2] || '';
+            const loginUrl = slug ? '/api/hotel-login' : '/api/login';
+            const body = slug ? {password: pwd, slug: slug} : {password: pwd};
+            fetch(loginUrl, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({password: pwd})
+                body: JSON.stringify(body)
             })
             .then(r => r.json())
             .then(data => {
                 if (data.ok) {
-                    window.location.href = '/dashboard';
+                    window.location.href = slug ? '/hotel/' + slug + '/dashboard' : '/dashboard';
                 } else {
                     document.getElementById('err').style.display = 'block';
                 }
@@ -333,6 +646,10 @@ DASHBOARD_HTML = """
         .unread-badge { background:#E05555; color:white; border-radius:50%; padding:2px 8px; font-size:12px; margin-left:8px; }
         .filter-bar { display:flex; gap:8px; margin-bottom:16px; }
         .filter { padding:6px 16px; border-radius:20px; font-size:12px; cursor:pointer; border:1px solid #333; background:#1a1a1a; color:#fff; }
+        @keyframes slideIn {
+            from { transform:translateX(100px); opacity:0; }
+            to { transform:translateX(0); opacity:1; }
+        }
         .filter.active { background:#C9A84C; color:#000; border-color:#C9A84C; }
     </style>
 </head>
@@ -346,6 +663,7 @@ DASHBOARD_HTML = """
         <button class="btn btn-gold" onclick="location.reload()">🔄 Обновить</button>
         <button class="btn btn-dark" onclick="markRead()">✅ Отметить все прочитанными</button>
         <button class="btn btn-dark" onclick="window.open('/qrcodes')">📱 QR Коды</button>
+        <button class="btn btn-dark" onclick="goToEdit()">⚙️ Настройки</button>
     </div>
 
     <div class="filter-bar">
@@ -452,8 +770,64 @@ DASHBOARD_HTML = """
                         <div class="stat"><div class="num">${userMsgs}</div><div class="label">Запросов гостей</div></div>
                         <div class="stat urgent"><div class="num">${urgent}</div><div class="label">🔴 Срочных</div></div>
                     `;
+                    checkUrgentSound(data);       
                 });
         }, 3000);
+
+        // Звуковое уведомление
+        let lastUrgentCount = 0;
+        function checkUrgentSound(data) {
+            const urgentCount = data.filter(m => m.priority === 'urgent' && m.is_read === 0).length;
+            if (urgentCount > lastUrgentCount) {
+                playAlert();
+                showPopup(data.find(m => m.priority === 'urgent' && m.is_read === 0));
+            }
+            lastUrgentCount = urgentCount;
+        }
+
+        function playAlert() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            [0, 0.3, 0.6].forEach(delay => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 880;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.3, ctx.currentTime + delay);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.3);
+                osc.start(ctx.currentTime + delay);
+                osc.stop(ctx.currentTime + delay + 0.3);
+            });
+        }
+
+        function showPopup(msg) {
+            if (!msg) return;
+            const popup = document.createElement('div');
+            popup.style.cssText = `
+                position:fixed; top:20px; right:20px; z-index:9999;
+                background:#E05555; color:white; padding:20px 24px;
+                border-radius:12px; font-size:15px; font-weight:500;
+                box-shadow:0 8px 32px rgba(224,85,85,0.4);
+                animation:slideIn 0.3s ease;
+                max-width:320px; line-height:1.5;
+            `;
+            popup.innerHTML = `
+                🔴 <b>СРОЧНЫЙ ЗАПРОС!</b><br>
+                🚪 Номер ${msg.room}<br>
+                💬 ${msg.message}
+                <br><br>
+                <small style="opacity:0.8">Нажмите чтобы закрыть</small>
+            `;
+            popup.onclick = () => popup.remove();
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 8000);
+        }
+
+        function goToEdit() {
+            const slug = window.location.pathname.split('/')[2] || '';
+            if (slug) window.location.href = '/hotel/' + slug + '/edit';
+        }
     </script>
 </body>
 </html>
@@ -465,6 +839,159 @@ def home():
 
 from fastapi import Request, Response as FastAPIResponse
 from fastapi.responses import RedirectResponse
+
+@app.get("/register", response_class=HTMLResponse)
+def register_page():
+    return REGISTER_HTML
+
+@app.post("/api/register")
+def api_register(data: dict):
+    slug = data.get("slug", "").strip()
+    name = data.get("name", "").strip()
+    password = data.get("password", "").strip()
+    info = data.get("info", "").strip()
+
+    if not all([slug, name, password, info]):
+        return {"ok": False, "error": "Tüm alanlar gerekli"}
+
+    if get_hotel(slug):
+        return {"ok": False, "error": "Bu isim zaten kullanılıyor"}
+
+    create_hotel(slug, name, password, info)
+    return {"ok": True, "slug": slug}
+
+@app.get("/hotel/{slug}", response_class=HTMLResponse)
+def hotel_chat(slug: str):
+    hotel = get_hotel(slug)
+    if not hotel:
+        return HTMLResponse("<h1 style='color:white;background:#0a0a0a;padding:40px;font-family:sans-serif'>❌ Otel bulunamadı</h1>", status_code=404)
+    return CHAT_HTML.replace("SmartStay AI", hotel["name"]).replace("SmartStay Resort 5*", hotel["name"])
+
+@app.get("/hotel/{slug}/dashboard", response_class=HTMLResponse)
+def hotel_dashboard(slug: str, request: Request):
+    hotel = get_hotel(slug)
+    if not hotel:
+        return HTMLResponse("<h1 style='color:white;background:#0a0a0a;padding:40px;font-family:sans-serif'>❌ Otel bulunamadı</h1>", status_code=404)
+    if request.cookies.get(f"auth_{slug}") != "yes":
+        return RedirectResponse(f"/hotel/{slug}/login")
+    return DASHBOARD_HTML.replace("SmartStay — Панель менеджера", hotel["name"] + " — Панель менеджера")
+
+@app.get("/hotel/{slug}/login", response_class=HTMLResponse)
+def hotel_login_page(slug: str):
+    hotel = get_hotel(slug)
+    if not hotel:
+        return HTMLResponse("❌ Otel bulunamadı", status_code=404)
+    return LOGIN_HTML.replace("SmartStay", hotel["name"])
+
+@app.post("/api/hotel-login")
+def api_hotel_login(data: dict, response: FastAPIResponse):
+    slug = data.get("slug", "")
+    password = data.get("password", "")
+    hotel = get_hotel(slug)
+    if hotel and hotel["password"] == password:
+        response.set_cookie(f"auth_{slug}", "yes", max_age=86400)
+        return {"ok": True}
+    return {"ok": False}
+
+@app.get("/api/hotel/{slug}/messages")
+def hotel_messages(slug: str, request: Request):
+    rows = get_hotel_messages(slug)
+    return [{"room": r[0], "role": r[1], "message": r[2], "created_at": r[3], "priority": r[4], "is_read": r[5]} for r in rows]
+
+@app.post("/api/hotel/{slug}/mark-read")
+def hotel_mark_read(slug: str):
+    mark_hotel_read(slug)
+    return {"status": "ok"}
+
+@app.post("/hotel/{slug}/chat")
+async def hotel_chat_api(slug: str, data: dict):
+    hotel = get_hotel(slug)
+    if not hotel:
+        return {"error": "Hotel not found"}
+
+    history = data.get("history", [])
+    message = data.get("message", "")
+    room = data.get("room", "101")
+
+    priority = save_hotel_message(slug, room, "user", message)
+    if priority == "urgent":
+        hotel = get_hotel(slug)
+        import asyncio
+        asyncio.create_task(send_telegram(
+            f"🔴 <b>СРОЧНО!</b>\n"
+            f"🏨 Отель: {hotel['name']}\n"
+            f"🚪 Номер: {room}\n"
+            f"💬 Сообщение: {message}\n"
+            f"⏰ Время: {datetime.now().strftime('%H:%M')}"
+        ))
+    history.append({"role": "user", "content": message})
+
+    system = hotel["info"] + f"\n\nОтель: {hotel['name']}\nГость в номере: {room}. Не спрашивай номер снова.\nОтвечай на языке гостя."
+
+    def generate():
+        full_response = []
+        with client.messages.stream(
+            model="claude-sonnet-4-5",
+            max_tokens=500,
+            system=system,
+            messages=history
+        ) as stream:
+            for text in stream.text_stream:
+                full_response.append(text)
+                yield f"data: {json.dumps({'text': text})}\n\n"
+        save_hotel_message(slug, room, "bot", "".join(full_response))
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
+@app.get("/hotel/{slug}/qr/{room}")
+def hotel_qr(slug: str, room: str, request: Request):
+    base = str(request.base_url).rstrip("/")
+    url = f"{base}/hotel/{slug}?room={room}"
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="#C9A84C", back_color="#0a0a0a")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return Response(content=buf.getvalue(), media_type="image/png")
+
+@app.get("/hotel/{slug}/qrcodes", response_class=HTMLResponse)
+def hotel_qrcodes(slug: str, request: Request):
+    hotel = get_hotel(slug)
+    if not hotel:
+        return HTMLResponse("❌ Otel bulunamadı", status_code=404)
+    rooms = list(range(101, 111)) + list(range(201, 211)) + list(range(301, 311))
+    cards = ""
+    for room in rooms:
+        cards += f"""
+        <div class="card">
+            <img src="/hotel/{slug}/qr/{room}" alt="QR {room}">
+            <div class="room">🚪 {room}</div>
+            <div class="hint">Skaniruy dlya pomoshchi</div>
+        </div>"""
+    return f"""<!DOCTYPE html>
+    <html><head><meta charset="utf-8"><title>QR — {hotel['name']}</title>
+    <style>
+        * {{margin:0;padding:0;box-sizing:border-box;}}
+        body {{background:#0a0a0a;color:white;font-family:sans-serif;padding:40px;}}
+        h1 {{color:#C9A84C;font-size:28px;margin-bottom:8px;}}
+        p {{color:#666;margin-bottom:32px;font-size:14px;}}
+        .grid {{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:20px;}}
+        .card {{background:#1a1a1a;border-radius:12px;padding:24px;text-align:center;border:1px solid #333;}}
+        .card img {{width:140px;height:140px;border-radius:8px;}}
+        .room {{font-size:16px;font-weight:700;color:#C9A84C;margin-top:12px;}}
+        .hint {{font-size:12px;color:#666;margin-top:4px;}}
+        .btn {{background:#C9A84C;color:#000;border:none;padding:12px 32px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:32px;}}
+    </style></head>
+    <body>
+        <h1>🏨 {hotel['name']} — QR Kodlar</h1>
+        <p>Распечатай и повесь в каждый номер.</p>
+        <button class="btn" onclick="window.print()">🖨️ Распечатать</button>
+        <div class="grid">{cards}</div>
+    </body></html>"""
+
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page():
@@ -537,6 +1064,53 @@ def get_qr(room: str):
     img.save(buf, format="PNG")
     buf.seek(0)
     return Response(content=buf.getvalue(), media_type="image/png")
+
+
+def update_hotel(slug, name, info, password=None):
+    conn = sqlite3.connect("smartstay.db")
+    if password:
+        conn.execute(
+            "UPDATE hotels SET name=?, info=?, password=? WHERE slug=?",
+            (name, info, password, slug)
+        )
+    else:
+        conn.execute(
+            "UPDATE hotels SET name=?, info=? WHERE slug=?",
+            (name, info, slug)
+        )
+    conn.commit()
+    conn.close()
+
+@app.get("/hotel/{slug}/edit", response_class=HTMLResponse)
+def hotel_edit(slug: str, request: Request):
+    hotel = get_hotel(slug)
+    if not hotel:
+        return HTMLResponse("❌ Otel bulunamadı", status_code=404)
+    if request.cookies.get(f"auth_{slug}") != "yes":
+        return RedirectResponse(f"/hotel/{slug}/login")
+    return EDIT_HTML
+
+@app.get("/api/hotel/{slug}/info")
+def hotel_info(slug: str, request: Request):
+    hotel = get_hotel(slug)
+    if not hotel:
+        return {"error": "Not found"}
+    return {"name": hotel["name"], "info": hotel["info"]}
+
+@app.post("/api/hotel/{slug}/update")
+def hotel_update(slug: str, data: dict, request: Request):
+    if request.cookies.get(f"auth_{slug}") != "yes":
+        return {"ok": False, "error": "Unauthorized"}
+    name = data.get("name", "").strip()
+    info = data.get("info", "").strip()
+    password = data.get("password", "").strip()
+    if not name or not info:
+        return {"ok": False, "error": "Ad ve bilgiler gerekli"}
+    update_hotel(slug, name, info, password if password else None)
+    return {"ok": True}
+
+
+
 
 @app.get("/qrcodes", response_class=HTMLResponse)
 def qrcodes():
