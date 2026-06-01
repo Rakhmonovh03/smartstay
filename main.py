@@ -202,6 +202,41 @@ def mark_read():
     mark_all_read()
     return {"status": "ok"}
 
+@app.get("/api/hotel/{slug}/stats")
+def hotel_stats(slug: str):
+    conn = sqlite3.connect("smartstay.db")
+    
+    # Сообщения по дням за последние 7 дней
+    days = conn.execute("""
+        SELECT 
+            substr(created_at, 1, 10) as day,
+            COUNT(*) as total,
+            SUM(CASE WHEN priority='urgent' THEN 1 ELSE 0 END) as urgent,
+            SUM(CASE WHEN role='user' THEN 1 ELSE 0 END) as guests
+        FROM messages 
+        WHERE hotel_slug=?
+        AND created_at >= date('now', '-7 days')
+        GROUP BY day
+        ORDER BY day ASC
+    """, (slug,)).fetchall()
+    
+    # Топ запросы
+    top_rooms = conn.execute("""
+        SELECT room, COUNT(*) as count
+        FROM messages
+        WHERE hotel_slug=? AND role='user'
+        GROUP BY room
+        ORDER BY count DESC
+        LIMIT 5
+    """, (slug,)).fetchall()
+    
+    conn.close()
+    
+    return {
+        "days": [{"day": r[0], "total": r[1], "urgent": r[2], "guests": r[3]} for r in days],
+        "top_rooms": [{"room": r[0], "count": r[1]} for r in top_rooms]
+    }
+
 @app.get("/api/hotel/{slug}/messages")
 def hotel_messages(slug: str):
     rows = get_hotel_messages(slug)

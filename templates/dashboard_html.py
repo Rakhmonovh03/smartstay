@@ -132,6 +132,36 @@ DASHBOARD_HTML = """
         }}
         .empty-state .icon {{ font-size:48px; margin-bottom:16px; }}
         .empty-state p {{ font-size:14px; }}
+
+        /* CHARTS */
+        .charts-grid {{
+            display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:32px;
+        }}
+        .chart-card {{
+            background:#111; border-radius:12px; padding:24px;
+            border:1px solid rgba(255,255,255,0.05);
+        }}
+        .chart-title {{ font-size:13px; color:#888; margin-bottom:16px; letter-spacing:1px; text-transform:uppercase; }}
+        .chart-wrap {{ height:160px; display:flex; align-items:flex-end; gap:8px; }}
+        .bar-item {{ flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }}
+        .bar-fill {{
+            width:100%; border-radius:4px 4px 0 0;
+            min-height:4px; transition:height 0.5s ease;
+            position:relative;
+        }}
+        .bar-fill:hover::after {{
+            content: attr(data-value);
+            position:absolute; top:-24px; left:50%; transform:translateX(-50%);
+            background:#333; color:white; padding:2px 8px; border-radius:4px; font-size:11px;
+            white-space:nowrap;
+        }}
+        .bar-label {{ font-size:10px; color:#555; text-align:center; }}
+        .top-rooms {{ display:flex; flex-direction:column; gap:10px; }}
+        .room-bar-item {{ display:flex; align-items:center; gap:12px; }}
+        .room-bar-name {{ font-size:13px; color:#C9A84C; width:60px; flex-shrink:0; }}
+        .room-bar-track {{ flex:1; background:rgba(255,255,255,0.05); border-radius:4px; height:8px; overflow:hidden; }}
+        .room-bar-fill {{ height:100%; border-radius:4px; background:linear-gradient(90deg, #C9A84C, #E8C96A); transition:width 0.5s ease; }}
+        .room-bar-count {{ font-size:12px; color:#555; width:30px; text-align:right; }}
     </style>
 </head>
 <body>
@@ -176,6 +206,17 @@ DASHBOARD_HTML = """
             <div class="header-btns">
                 <button class="btn btn-dark" onclick="markRead()">✅ Okundu</button>
                 <button class="btn btn-gold" onclick="location.reload()">🔄 Yenile</button>
+            </div>
+        </div>
+
+        <div class="charts-grid" id="chartsGrid" style="display:none">
+            <div class="chart-card">
+                <div class="chart-title">📈 Son 7 Gün — Mesajlar</div>
+                <div class="chart-wrap" id="chartBars"></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">🏆 En Aktif Odalar</div>
+                <div class="top-rooms" id="topRooms"></div>
             </div>
         </div>
 
@@ -378,6 +419,50 @@ DASHBOARD_HTML = """
 
         loadData();
         setInterval(loadData, 3000);
+
+        // Load charts
+        function loadCharts() {{
+            fetch('/api/hotel/' + slug + '/stats')
+                .then(r => r.json())
+                .then(data => {{
+                    const grid = document.getElementById('chartsGrid');
+                    if (!data.days || data.days.length === 0) return;
+                    grid.style.display = 'grid';
+
+                    // Bar chart
+                    const max = Math.max(...data.days.map(d => d.total), 1);
+                    document.getElementById('chartBars').innerHTML = data.days.map(d => `
+                        <div class="bar-item">
+                            <div class="bar-fill" 
+                                style="height:${{Math.round((d.total/max)*140)}}px; background:linear-gradient(to top, #C9A84C, #E8C96A);"
+                                data-value="${{d.total}}">
+                            </div>
+                            <div class="bar-fill"
+                                style="height:${{Math.round((d.urgent/max)*140)}}px; background:#E05555; margin-top:-${{Math.round((d.urgent/max)*140)}}px; opacity:0.7;"
+                                data-value="Acil: ${{d.urgent}}">
+                            </div>
+                            <div class="bar-label">${{d.day.slice(5)}}</div>
+                        </div>
+                    `).join('');
+
+                    // Top rooms
+                    const maxCount = Math.max(...data.top_rooms.map(r => r.count), 1);
+                    document.getElementById('topRooms').innerHTML = data.top_rooms.map(r => `
+                        <div class="room-bar-item">
+                            <div class="room-bar-name">🚪 ${{r.room}}</div>
+                            <div class="room-bar-track">
+                                <div class="room-bar-fill" style="width:${{Math.round((r.count/maxCount)*100)}}%"></div>
+                            </div>
+                            <div class="room-bar-count">${{r.count}}</div>
+                        </div>
+                    `).join('');
+                }});
+        }}
+
+        if (slug) {{
+            loadCharts();
+            setInterval(loadCharts, 30000);
+        }}
     </script>
 </body>
 </html>
