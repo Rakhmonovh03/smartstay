@@ -165,3 +165,10 @@ def get_hotel_stats(slug):
     ).fetchone()[0]
     conn.close()
     return {"total": total, "urgent": urgent, "unread": unread, "today": today}
+
+def delete_hotel(slug):
+    conn = sqlite3.connect(DATABASE_PATH)
+    conn.execute("DELETE FROM hotels WHERE slug=?", (slug,))
+    conn.execute("DELETE FROM messages WHERE hotel_slug=?", (slug,))
+    conn.commit()
+    conn.close()

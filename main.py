@@ -391,6 +391,14 @@ def admin_logout(response: Response):
     response.delete_cookie("admin_auth")
     return RedirectResponse("/admin/login")
 
+@app.delete("/api/admin/hotel/{slug}")
+def api_admin_delete_hotel(slug: str, request: Request):
+    if request.cookies.get("admin_auth") != "yes":
+        return {"error": "Unauthorized"}
+    from database import delete_hotel
+    delete_hotel(slug)
+    return {"ok": True}
+
 @app.get("/api/admin/hotels")
 def api_admin_hotels(request: Request):
     if request.cookies.get("admin_auth") != "yes":

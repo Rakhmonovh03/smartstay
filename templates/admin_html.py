@@ -85,6 +85,29 @@ ADMIN_HTML = """
 
         .live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#4CAF50; margin-right:6px; animation:pulse 2s infinite; }
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+        /* MODAL */
+        .modal-overlay {
+            position:fixed; inset:0; background:rgba(0,0,0,0.8);
+            display:flex; align-items:center; justify-content:center;
+            z-index:1000; opacity:0; pointer-events:none; transition:opacity 0.3s;
+        }
+        .modal-overlay.active { opacity:1; pointer-events:all; }
+        .modal {
+            background:#111; border-radius:16px; padding:40px;
+            width:420px; border:1px solid rgba(201,168,76,0.2);
+            transform:scale(0.9); transition:transform 0.3s;
+        }
+        .modal-overlay.active .modal { transform:scale(1); }
+        .modal-icon { font-size:48px; text-align:center; margin-bottom:16px; }
+        .modal h3 { font-size:20px; font-weight:700; margin-bottom:8px; text-align:center; }
+        .modal p { font-size:14px; color:#666; text-align:center; margin-bottom:32px; line-height:1.6; }
+        .modal-btns { display:flex; gap:12px; }
+        .modal-btn { flex:1; padding:14px; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+        .modal-btn-cancel { background:#1a1a1a; color:#fff; border:1px solid #333; }
+        .modal-btn-cancel:hover { background:#222; }
+        .modal-btn-delete { background:#E05555; color:#fff; }
+        .modal-btn-delete:hover { background:#f06666; }
     </style>
 </head>
 <body>
@@ -99,6 +122,19 @@ ADMIN_HTML = """
             <a class="nav-item" href="/admin/logout" style="border-radius:8px; color:#E05555;">
                 <span>🚪</span> Çıkış
             </a>
+        </div>
+    </div>
+
+    <!-- DELETE MODAL -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <div class="modal-icon">🗑️</div>
+            <h3>Oteli Sil</h3>
+            <p id="modalText">Bu oteli silmek istediğinizden emin misiniz?<br>Tüm mesajlar da silinecek!</p>
+            <div class="modal-btns">
+                <button class="modal-btn modal-btn-cancel" onclick="closeModal()">İptal</button>
+                <button class="modal-btn modal-btn-delete" id="confirmDelete">Evet, Sil</button>
+            </div>
         </div>
     </div>
 
@@ -208,11 +244,62 @@ ADMIN_HTML = """
                                 <a href="/hotel/${h.slug}" target="_blank" class="action-link">👤 Chat</a>
                                 <a href="/hotel/${h.slug}/dashboard" target="_blank" class="action-link">📊 Panel</a>
                                 <a href="/hotel/${h.slug}/edit" target="_blank" class="action-link">⚙️ Düzenle</a>
+                                <button onclick="deleteHotel('${h.slug}', '${h.name}')" class="action-link" style="background:rgba(224,85,85,0.15);color:#E05555;border:1px solid rgba(224,85,85,0.3);cursor:pointer;">🗑️ Sil</button>
                             </div>
                         </td>
                     </tr>
                 `).join('');
             });
+
+        let pendingDeleteSlug = null;
+
+        function deleteHotel(slug, name) {
+            pendingDeleteSlug = slug;
+            document.getElementById('modalText').innerHTML = 
+                `<b style="color:white">${name}</b> otelini silmek istediğinizden emin misiniz?<br><br>
+                <span style="color:#E05555">⚠️ Tüm mesajlar da silinecek!</span>`;
+            document.getElementById('deleteModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+            pendingDeleteSlug = null;
+        }
+
+        document.getElementById('confirmDelete').onclick = async function() {
+            if (!pendingDeleteSlug) return;
+            const res = await fetch('/api/admin/hotel/' + pendingDeleteSlug, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            const data = await res.json();
+            closeModal();
+            if (data.ok) {
+                showToast('✅ Otel silindi!', 'green');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('❌ Hata: ' + (data.error || 'Bilinmeyen hata'), 'red');
+            }
+        };
+
+        document.getElementById('deleteModal').onclick = function(e) {
+            if (e.target === this) closeModal();
+        };
+
+        function showToast(message, color) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position:fixed; bottom:24px; right:24px; z-index:9999;
+                background:${color === 'green' ? '#4CAF50' : '#E05555'};
+                color:white; padding:16px 24px; border-radius:10px;
+                font-size:14px; font-weight:500;
+                box-shadow:0 8px 24px rgba(0,0,0,0.3);
+                animation:slideIn 0.3s ease;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
 
         setInterval(() => location.reload(), 30000);
     </script>
