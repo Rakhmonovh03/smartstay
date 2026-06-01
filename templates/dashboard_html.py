@@ -162,6 +162,50 @@ DASHBOARD_HTML = """
         .room-bar-track {{ flex:1; background:rgba(255,255,255,0.05); border-radius:4px; height:8px; overflow:hidden; }}
         .room-bar-fill {{ height:100%; border-radius:4px; background:linear-gradient(90deg, #C9A84C, #E8C96A); transition:width 0.5s ease; }}
         .room-bar-count {{ font-size:12px; color:#555; width:30px; text-align:right; }}
+
+        /* MOBILE */
+        @media (max-width: 768px) {{
+            .sidebar {{
+                position: fixed; bottom:0; top:auto; left:0; right:0; width:100%;
+                height:64px; flex-direction:row;
+                border-right:none; border-top:1px solid rgba(201,168,76,0.15);
+                padding:0; display:flex; align-items:center; justify-content:space-around;
+                z-index:200;
+            }}
+            .sidebar-logo {{ display:none; }}
+            .nav-item {{
+                flex-direction:column; gap:4px; padding:8px 12px;
+                font-size:10px; border-right:none !important;
+                border-top:2px solid transparent;
+            }}
+            .nav-item.active {{ border-top:2px solid #C9A84C; border-right:none; background:none; }}
+            .nav-item .nav-icon {{ font-size:20px; }}
+            .sidebar > div:last-child {{ display:none; }}
+            .main {{
+                margin-left:0; padding:16px; padding-bottom:80px;
+            }}
+            .page-header {{ flex-direction:column; gap:12px; align-items:flex-start; }}
+            .header-btns {{ width:100%; display:flex; }}
+            .header-btns .btn {{ flex:1; }}
+            .stats {{
+                grid-template-columns:1fr 1fr;
+                gap:12px;
+            }}
+            .stat {{ padding:16px; }}
+            .stat-num {{ font-size:28px; }}
+            .charts-grid {{ grid-template-columns:1fr; }}
+            .filter-bar {{ flex-wrap:wrap; }}
+            table {{ font-size:12px; }}
+            th {{ padding:10px 8px; font-size:10px; }}
+            td {{ padding:10px 8px; }}
+            .badge {{ padding:3px 8px; font-size:11px; }}
+            .room-tag {{ font-size:11px; }}
+        }}
+
+        @media (max-width: 480px) {{
+            .stats {{ grid-template-columns:1fr 1fr; }}
+            .page-title {{ font-size:16px; }}
+        }}
     </style>
 </head>
 <body>
