@@ -6,3 +6,4 @@ sqlalchemy
 aiosqlite
 qrcode[pil]
 pillow
+openpyxl

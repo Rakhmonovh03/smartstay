@@ -5,6 +5,9 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 import json, sqlite3, asyncio
 import qrcode, io
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
+import io as BytesIO
 
 from config import MANAGER_PASSWORD, ADMIN_PASSWORD
 from database import (
@@ -201,6 +204,70 @@ def api_messages():
 def mark_read():
     mark_all_read()
     return {"status": "ok"}
+
+@app.get("/api/hotel/{slug}/export")
+def hotel_export(slug: str, request: Request):
+    if request.cookies.get(f"auth_{slug}") != "yes":
+        return {"error": "Unauthorized"}
+    
+    hotel = get_hotel(slug)
+    if not hotel:
+        return {"error": "Not found"}
+    
+    rows = get_hotel_messages(slug)
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Mesajlar"
+    
+    # Header style
+    header_fill = PatternFill(start_color="C9A84C", end_color="C9A84C", fill_type="solid")
+    header_font = Font(bold=True, color="000000", size=12)
+    
+    headers = ["Oda", "Kim", "Mesaj", "Öncelik", "Saat", "Okundu"]
+    for i, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=i, value=h)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center")
+    
+    # Column widths
+    ws.column_dimensions['A'].width = 10
+    ws.column_dimensions['B'].width = 12
+    ws.column_dimensions['C'].width = 60
+    ws.column_dimensions['D'].width = 12
+    ws.column_dimensions['E'].width = 18
+    ws.column_dimensions['F'].width = 10
+    
+    # Data
+    for i, row in enumerate(rows, 2):
+        room, role, message, created_at, priority, is_read = row
+        ws.cell(row=i, column=1, value=f"Oda {room}")
+        ws.cell(row=i, column=2, value="Misafir" if role == "user" else "AI")
+        ws.cell(row=i, column=3, value=message)
+        ws.cell(row=i, column=4, value="🔴 Acil" if priority == "urgent" else "🟢 Normal")
+        ws.cell(row=i, column=5, value=created_at)
+        ws.cell(row=i, column=6, value="✓" if is_read else "○")
+        
+        # Color urgent rows
+        if priority == "urgent":
+            for col in range(1, 7):
+                ws.cell(row=i, column=col).fill = PatternFill(
+                    start_color="2D1515", end_color="2D1515", fill_type="solid"
+                )
+    
+    # Save
+    buf = BytesIO.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    
+    filename = f"{hotel['name']}-mesajlar.xlsx"
+    
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 @app.get("/api/hotel/{slug}/stats")
 def hotel_stats(slug: str):

@@ -21,13 +21,23 @@ def get_chat_html(hotel_name="SmartStay AI"):
         .input-area {{ padding:16px; display:flex; gap:8px; border-top:1px solid #333; }}
         input {{ flex:1; background:#2a2a2a; border:none; border-radius:8px; padding:12px; color:white; font-size:14px; outline:none; }}
         button {{ background:#C9A84C; border:none; border-radius:8px; padding:12px 16px; cursor:pointer; font-size:18px; }}
+        .theme-btn {{ position:absolute; top:16px; right:16px; background:rgba(0,0,0,0.2); border:none; border-radius:20px; padding:6px 12px; cursor:pointer; font-size:12px; color:#000; }}
+        body.light {{ background:#f5f5f5; }}
+        body.light .chat-box {{ background:#fff; box-shadow:0 20px 60px rgba(0,0,0,0.15); }}
+        body.light .messages {{ background:#fff; }}
+        body.light .bot {{ background:#f0f0f0; color:#000; }}
+        body.light .room-bar {{ background:#f9f9f9; }}
+        body.light .input-area {{ border-top:1px solid #eee; background:#fff; }}
+        body.light input {{ background:#f0f0f0; color:#000; }}
+        body.light input::placeholder {{ color:#999; }}
     </style>
 </head>
 <body>
     <div class="chat-box">
-        <div class="chat-header">
+        <div class="chat-header" style="position:relative">
             <h2>🏨 {hotel_name}</h2>
             <p>Консьерж • Concierge • Konsiyerj</p>
+            <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">☀️ Light</button>
         </div>
         <div class="room-bar">🚪 Номер: <span id="roomNum">101</span></div>
         <div class="messages" id="messages">
@@ -88,6 +98,24 @@ def get_chat_html(hotel_name="SmartStay AI"):
             messages.push({{role: 'assistant', content: fullText}});
             input.disabled = false;
             input.focus();
+        }}
+
+        function toggleTheme() {{
+            document.body.classList.toggle('light');
+            const btn = document.getElementById('themeBtn');
+            if (document.body.classList.contains('light')) {{
+                btn.textContent = '🌙 Dark';
+                localStorage.setItem('theme', 'light');
+            }} else {{
+                btn.textContent = '☀️ Light';
+                localStorage.setItem('theme', 'dark');
+            }}
+        }}
+
+        // Load saved theme
+        if (localStorage.getItem('theme') === 'light') {{
+            document.body.classList.add('light');
+            document.getElementById('themeBtn').textContent = '🌙 Dark';
         }}
 
         function addMessage(text, type) {{

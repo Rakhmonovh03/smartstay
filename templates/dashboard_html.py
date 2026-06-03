@@ -249,6 +249,7 @@ DASHBOARD_HTML = """
             </div>
             <div class="header-btns">
                 <button class="btn btn-dark" onclick="markRead()">✅ Okundu</button>
+                <button class="btn btn-dark" onclick="exportExcel()">📥 Excel</button>
                 <button class="btn btn-gold" onclick="location.reload()">🔄 Yenile</button>
             </div>
         </div>
@@ -400,14 +401,43 @@ DASHBOARD_HTML = """
             else window.open('/qrcodes');
         }}
 
+        function exportExcel() {{
+            if (slug) {{
+                window.location.href = '/api/hotel/' + slug + '/export';
+            }}
+        }}
+
         function checkUrgentSound(data) {{
             const urgentCount = data.filter(m => m.priority === 'urgent' && m.is_read === 0).length;
             if (urgentCount > lastUrgentCount) {{
                 playAlert();
                 const msg = data.find(m => m.priority === 'urgent' && m.is_read === 0);
                 showPopup(msg);
+                sendPushNotification(msg);
             }}
             lastUrgentCount = urgentCount;
+        }}
+
+        function sendPushNotification(msg) {{
+            if (!msg) return;
+            if (!('Notification' in window)) return;
+            if (Notification.permission === 'granted') {{
+                new Notification('🔴 ACİL TALEP!', {{
+                    body: `Oda ${{msg.room}}: ${{msg.message}}`,
+                    icon: '/favicon.ico',
+                    badge: '/favicon.ico',
+                    vibrate: [200, 100, 200]
+                }});
+            }} else if (Notification.permission !== 'denied') {{
+                Notification.requestPermission().then(permission => {{
+                    if (permission === 'granted') {{
+                        new Notification('🔴 ACİL TALEP!', {{
+                            body: `Oda ${{msg.room}}: ${{msg.message}}`,
+                            icon: '/favicon.ico'
+                        }});
+                    }}
+                }});
+            }}
         }}
 
         function playAlert() {{
@@ -459,6 +489,13 @@ DASHBOARD_HTML = """
                     document.getElementById('pageTitle').textContent = d.name + ' — Panel';
                     document.title = d.name + ' — SmartStay';
                 }});
+        }}
+
+        // Request notification permission on load
+        if ('Notification' in window && Notification.permission === 'default') {{
+            setTimeout(() => {{
+                Notification.requestPermission();
+            }}, 2000);
         }}
 
         loadData();
