@@ -343,8 +343,8 @@ REGISTER_HTML = """<!DOCTYPE html>
 
         document.getElementById('name').addEventListener('input', function() {
             const slug = this.value.toLowerCase()
-                .replace(/[^a-z0-9\s-]/g, '')
-                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9\\s-]/g, '')
+                .replace(/\\s+/g, '-')
                 .replace(/-+/g, '-')
                 .slice(0, 30);
             document.getElementById('slug').value = slug;
@@ -643,7 +643,7 @@ EDIT_HTML = """
         })();
         function copyEmbed() {
             const base = window.location.origin;
-            const code = '<script src="' + base + '/hotel/' + slug + '/embed.js"><\/script>';
+            const code = '<script src="' + base + '/hotel/' + slug + '/embed.js"><\\/script>';
             navigator.clipboard.writeText(code).then(() => {
                 const el = document.getElementById('embedCopied');
                 el.style.display = 'block';
