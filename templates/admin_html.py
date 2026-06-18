@@ -69,9 +69,24 @@ ADMIN_HTML = """
         .badge-new { background:rgba(201,168,76,0.15); color:#C9A84C; border:1px solid rgba(201,168,76,0.3); }
         .hotel-name { font-weight:600; font-size:15px; }
         .hotel-slug { font-size:12px; color:#555; margin-top:2px; }
-        .action-links { display:flex; gap:12px; }
-        .action-link { color:#C9A84C; font-size:13px; text-decoration:none; padding:6px 14px; border:1px solid rgba(201,168,76,0.3); border-radius:6px; transition:all 0.2s; }
+        .action-links { display:flex; gap:8px; flex-wrap:wrap; }
+        .action-link { color:#C9A84C; font-size:12px; text-decoration:none; padding:5px 12px; border:1px solid rgba(201,168,76,0.3); border-radius:6px; transition:all 0.2s; }
         .action-link:hover { background:rgba(201,168,76,0.1); }
+        .plan-pill {
+            display:inline-block; padding:3px 10px; border-radius:20px;
+            font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
+        }
+        .plan-trial   { background:rgba(91,141,239,.12); color:#5B8DEF; border:1px solid rgba(91,141,239,.25); }
+        .plan-starter { background:rgba(201,168,76,.12); color:#C9A84C; border:1px solid rgba(201,168,76,.25); }
+        .plan-pro     { background:rgba(76,175,80,.12);  color:#4CAF50; border:1px solid rgba(76,175,80,.25); }
+        .plan-premium { background:rgba(155,89,182,.12); color:#9B59B6; border:1px solid rgba(155,89,182,.25); }
+        .plan-select {
+            background:#1a1a1a; border:1px solid #333; border-radius:6px;
+            color:#C9A84C; font-size:11px; font-weight:700; padding:3px 8px;
+            cursor:pointer; outline:none; text-transform:uppercase; letter-spacing:.5px;
+        }
+        .plan-select:focus { border-color:#C9A84C; }
+        .plan-select option { background:#1a1a1a; color:white; }
 
         .revenue-card {
             background:linear-gradient(135deg, rgba(201,168,76,0.1), rgba(201,168,76,0.03));
@@ -116,7 +131,8 @@ ADMIN_HTML = """
             <h2>🔐 Super Admin</h2>
             <p>SmartStay AI — 2026</p>
         </div>
-        <a class="nav-item active"><span>🏨</span> Tüm Oteller</a>
+        <a class="nav-item active" onclick="showTab('hotels')" id="tab-hotels"><span>🏨</span> Tüm Oteller</a>
+        <a class="nav-item" onclick="showTab('owners')" id="tab-owners"><span>👥</span> Владельцы</a>
         <a class="nav-item" href="/register"><span>➕</span> Yeni Otel Ekle</a>
         <div style="position:absolute; bottom:24px; left:0; right:0; padding:0 16px;">
             <a class="nav-item" href="/admin/logout" style="border-radius:8px; color:#E05555;">
@@ -138,7 +154,7 @@ ADMIN_HTML = """
         </div>
     </div>
 
-    <div class="main">
+    <div id="section-hotels" class="main">
         <div class="page-header">
             <div>
                 <div class="page-title">Tüm Oteller</div>
@@ -175,9 +191,9 @@ ADMIN_HTML = """
                 <div class="stat-label">Toplam Mesaj</div>
             </div>
             <div class="stat blue">
-                <div class="stat-icon">📊</div>
-                <div class="stat-num" id="avgMessages">—</div>
-                <div class="stat-label">Ortalama Mesaj/Otel</div>
+                <div class="stat-icon">🛎️</div>
+                <div class="stat-num" id="totalGuests">—</div>
+                <div class="stat-label">Toplam Misafir</div>
             </div>
             <div class="stat purple">
                 <div class="stat-icon">🚀</div>
@@ -192,9 +208,12 @@ ADMIN_HTML = """
                     <tr>
                         <th>#</th>
                         <th>Otel</th>
+                        <th>Plan</th>
                         <th>Mesajlar</th>
+                        <th>Misafirler</th>
+                        <th>Puan</th>
                         <th>Telegram</th>
-                        <th>Kayıt Tarihi</th>
+                        <th>Kayıt</th>
                         <th>İşlemler</th>
                     </tr>
                 </thead>
@@ -204,52 +223,123 @@ ADMIN_HTML = """
     </div>
 
     <script>
-        fetch('/api/admin/hotels')
+        function esc(t) {
+            const d = document.createElement('div');
+            d.appendChild(document.createTextNode(String(t)));
+            return d.innerHTML;
+        }
+
+        fetch('/api/admin/hotels', {credentials:'include'})
             .then(r => r.json())
             .then(data => {
                 const hotels = data.hotels;
                 const total = hotels.length;
-                const totalMsg = data.total_messages;
                 const active = hotels.filter(h => h.message_count > 0).length;
-                const monthly = total * 800;
+                const monthly = data.monthly_revenue || 0;
                 const yearly = monthly * 12;
 
                 document.getElementById('totalHotels').textContent = total;
-                document.getElementById('totalMessages').textContent = totalMsg;
-                document.getElementById('avgMessages').textContent = total ? Math.round(totalMsg/total) : 0;
+                document.getElementById('totalMessages').textContent = data.total_messages;
+                document.getElementById('totalGuests').textContent = data.total_guests || 0;
                 document.getElementById('activeHotels').textContent = active;
                 document.getElementById('revenueNum').textContent = '$' + monthly.toLocaleString();
                 document.getElementById('yearlyRevenue').textContent = '$' + yearly.toLocaleString();
 
-                document.getElementById('tbody').innerHTML = hotels.map((h, i) => `
-                    <tr>
+                const PLAN_LABELS = {trial:'Trial', starter:'Starter', pro:'Pro', premium:'Premium'};
+
+                document.getElementById('tbody').innerHTML = hotels.map((h, i) => {
+                    const plan = h.plan || 'trial';
+                    const stars = h.avg_rating
+                        ? '★'.repeat(Math.round(h.avg_rating)) + '☆'.repeat(5-Math.round(h.avg_rating))
+                        : '—';
+                    const ratingColor = !h.avg_rating ? '#555'
+                        : h.avg_rating >= 4 ? '#C9A84C'
+                        : h.avg_rating >= 3 ? '#E8A040' : '#E05555';
+                    return `<tr>
                         <td style="color:#555">${i+1}</td>
                         <td>
-                            <div class="hotel-name">${h.name}</div>
-                            <div class="hotel-slug">${h.slug}</div>
+                            <div class="hotel-name">${esc(h.name)}</div>
+                            <div class="hotel-slug">${esc(h.slug)}</div>
                         </td>
                         <td>
+                        <select class="plan-select" onchange="changePlan('${esc(h.slug)}', this)">
+                            ${['trial','starter','pro','premium'].map(p =>
+                                `<option value="${p}" ${p===plan?'selected':''}>${PLAN_LABELS[p]||p}</option>`
+                            ).join('')}
+                        </select>
+                    </td>
+                        <td>
                             <span class="badge ${h.message_count > 0 ? 'badge-active' : 'badge-new'}">
-                                ${h.message_count > 0 ? '✓' : '○'} ${h.message_count} mesaj
+                                ${h.message_count > 0 ? '✓' : '○'} ${h.message_count}
                             </span>
+                        </td>
+                        <td style="font-size:13px">
+                            <span style="color:#4CAF50;font-weight:600">${h.active_guests}</span>
+                            <span style="color:#555"> / ${h.total_guests}</span>
+                        </td>
+                        <td style="font-size:12px;color:${ratingColor};white-space:nowrap">
+                            ${h.avg_rating ? h.avg_rating + ' ' + stars : '—'}
                         </td>
                         <td>
                             ${h.telegram_token
                                 ? '<span class="badge badge-active">✓ Bağlı</span>'
-                                : '<span style="color:#555; font-size:12px">— Yok</span>'}
+                                : '<span style="color:#555;font-size:12px">— Yok</span>'}
                         </td>
-                        <td style="color:#555; font-size:12px">${h.created_at}</td>
+                        <td style="color:#555;font-size:12px">${esc(h.created_at)}</td>
                         <td>
                             <div class="action-links">
-                                <a href="/hotel/${h.slug}" target="_blank" class="action-link">👤 Chat</a>
-                                <a href="/hotel/${h.slug}/dashboard" target="_blank" class="action-link">📊 Panel</a>
-                                <a href="/hotel/${h.slug}/edit" target="_blank" class="action-link">⚙️ Düzenle</a>
-                                <button onclick="deleteHotel('${h.slug}', '${h.name}')" class="action-link" style="background:rgba(224,85,85,0.15);color:#E05555;border:1px solid rgba(224,85,85,0.3);cursor:pointer;">🗑️ Sil</button>
+                                <a href="/hotel/${h.slug}" target="_blank" class="action-link">👤</a>
+                                <a href="/hotel/${h.slug}/dashboard" target="_blank" class="action-link">📊</a>
+                                <a href="/hotel/${h.slug}/edit" target="_blank" class="action-link">⚙️</a>
+                                <a href="/api/admin/hotel/${h.slug}/impersonate" class="action-link" style="background:rgba(74,176,232,0.1);color:#4ab0e8;border:1px solid rgba(74,176,232,0.3);" title="Войти как менеджер">🔓</a>
+                                <button onclick="resetPassword('${esc(h.slug)}')" class="action-link" style="background:rgba(201,168,76,0.1);color:#C9A84C;cursor:pointer;" title="Şifre sıfırla">🔑</button>
+                                <button onclick="deleteHotel('${esc(h.slug)}', '${esc(h.name)}')" class="action-link" style="background:rgba(224,85,85,0.15);color:#E05555;border:1px solid rgba(224,85,85,0.3);cursor:pointer;">🗑️</button>
                             </div>
                         </td>
-                    </tr>
-                `).join('');
+                    </tr>`;
+                }).join('');
             });
+
+        async function changePlan(slug, selectEl) {
+            const plan = selectEl.value;
+            try {
+                const res = await fetch('/api/admin/hotel/' + slug + '/plan', {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({plan})
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    showToast('✅ Plan güncellendi: ' + plan.toUpperCase(), 'green');
+                } else {
+                    showToast('❌ ' + (data.error || 'Hata'), 'red');
+                }
+            } catch(e) {
+                showToast('❌ Bağlantı hatası', 'red');
+            }
+        }
+
+        async function resetPassword(slug) {
+            const pw = prompt('🔑 ' + slug + ' için yeni şifre girin (min 6 karakter):');
+            if (!pw || pw.trim().length < 6) {
+                if (pw !== null) alert('Şifre en az 6 karakter olmalı');
+                return;
+            }
+            try {
+                const res = await fetch('/api/admin/hotel/' + slug + '/password', {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({password: pw.trim()})
+                });
+                const data = await res.json();
+                if (data.ok) showToast('✅ Şifre güncellendi: ' + slug, 'green');
+                else showToast('❌ ' + (data.error || 'Hata'), 'red');
+            } catch(e) {
+                showToast('❌ Bağlantı hatası', 'red');
+            }
+        }
 
         let pendingDeleteSlug = null;
 
@@ -301,8 +391,112 @@ ADMIN_HTML = """
             setTimeout(() => toast.remove(), 3000);
         }
 
-        setInterval(() => location.reload(), 30000);
+        // ===== OWNERS TAB =====
+        function showTab(tab) {
+            document.getElementById('section-hotels').style.display = tab === 'hotels' ? '' : 'none';
+            document.getElementById('section-owners').style.display = tab === 'owners' ? '' : 'none';
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            if (tab === 'owners') loadOwners();
+        }
+
+        async function loadOwners() {
+            const [ownersRes, hotelsRes] = await Promise.all([
+                fetch('/api/admin/owners', {credentials:'include'}).then(r => r.json()),
+                fetch('/api/admin/hotels', {credentials:'include'}).then(r => r.json())
+            ]);
+            const owners = ownersRes.owners || [];
+            const hotels = hotelsRes.hotels || [];
+            const allSlugs = hotels.map(h => h.slug);
+
+            document.getElementById('owners-count').textContent = owners.length;
+
+            const list = document.getElementById('owners-list');
+            if (owners.length === 0) {
+                list.innerHTML = '<div style="color:#555;padding:20px;text-align:center">Нет владельцев</div>';
+                return;
+            }
+            list.innerHTML = owners.map(o => `
+            <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:20px;margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                <div>
+                  <div style="font-weight:700;font-size:15px">${esc(o.name)}</div>
+                  <div style="color:#666;font-size:13px">${esc(o.email)}</div>
+                </div>
+                <div style="font-size:12px;color:#555">${esc(o.created_at)}</div>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+                <select id="sel-${o.id}" style="background:#111;border:1px solid #333;border-radius:6px;color:#eee;padding:6px 10px;font-size:13px">
+                  <option value="">— Отель для привязки —</option>
+                  ${allSlugs.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}
+                </select>
+                <button onclick="assignHotel(${o.id})" style="padding:6px 14px;background:#C9A84C;color:#000;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">Привязать</button>
+              </div>
+            </div>`).join('');
+        }
+
+        async function assignHotel(ownerId) {
+            const sel = document.getElementById('sel-' + ownerId);
+            const slug = sel.value;
+            if (!slug) { showToast('Выберите отель', 'red'); return; }
+            const r = await fetch('/api/admin/owners/' + ownerId + '/hotels', {
+                method: 'POST', credentials: 'include',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({hotel_slug: slug})
+            });
+            const d = await r.json();
+            if (d.ok) { showToast('✅ Отель привязан!', 'green'); }
+            else { showToast('❌ ' + (d.error || 'Ошибка'), 'red'); }
+        }
+
+        async function createOwner() {
+            const name  = document.getElementById('new-owner-name').value.trim();
+            const email = document.getElementById('new-owner-email').value.trim();
+            const pass  = document.getElementById('new-owner-pass').value.trim();
+            if (!name || !email || !pass) { showToast('Заполните все поля', 'red'); return; }
+            const r = await fetch('/api/admin/owners', {
+                method: 'POST', credentials: 'include',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({name, email, password: pass})
+            });
+            const d = await r.json();
+            if (d.ok) { showToast('✅ Владелец создан!', 'green'); loadOwners(); }
+            else { showToast('❌ ' + (d.error || 'Ошибка'), 'red'); }
+        }
+
+        setInterval(() => {
+            if (document.getElementById('section-hotels').style.display !== 'none') location.reload();
+        }, 30000);
     </script>
+
+    <!-- OWNERS SECTION (hidden by default) -->
+    <div id="section-owners" style="display:none" class="main">
+        <div class="page-header">
+            <div>
+                <div class="page-title">👥 Владельцы сети</div>
+                <div class="page-sub">Аккаунты с доступом к нескольким отелям</div>
+            </div>
+        </div>
+
+        <!-- Create owner form -->
+        <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:14px;padding:24px;margin-bottom:28px">
+            <div style="font-weight:700;font-size:15px;margin-bottom:16px">➕ Создать нового владельца</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+                <input id="new-owner-name" placeholder="Имя" style="flex:1;min-width:150px;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#eee;padding:10px 14px;font-size:14px">
+                <input id="new-owner-email" placeholder="Email" type="email" style="flex:2;min-width:200px;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#eee;padding:10px 14px;font-size:14px">
+                <input id="new-owner-pass" placeholder="Пароль" type="password" style="flex:1;min-width:150px;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#eee;padding:10px 14px;font-size:14px">
+                <button onclick="createOwner()" style="padding:10px 20px;background:#C9A84C;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">Создать</button>
+            </div>
+        </div>
+
+        <div style="font-size:13px;color:#666;margin-bottom:16px">Всего владельцев: <b id="owners-count">—</b></div>
+        <div id="owners-list"></div>
+
+        <div style="margin-top:20px;padding:16px;background:#111;border-radius:10px;font-size:13px;color:#555">
+            💡 Владелец заходит на <b style="color:#C9A84C">/owner/login</b> и видит только свои отели.
+            Кнопка 🔓 в таблице отелей входит в дашборд без пароля (для вас как Super Admin).
+        </div>
+    </div>
 </body>
 </html>
 """

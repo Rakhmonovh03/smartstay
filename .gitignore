@@ -1,4 +1,9 @@
 .env
-smartstay.db
-__pycache__
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+__pycache__/
 *.pyc
+*.pyo
+.DS_Store

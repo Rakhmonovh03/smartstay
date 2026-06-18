@@ -1,9 +1,11 @@
 fastapi
-uvicorn
+uvicorn[standard]
 anthropic
 python-dotenv
-sqlalchemy
-aiosqlite
+python-multipart
 qrcode[pil]
 pillow
 openpyxl
+bcrypt
+slowapi
+stripe
