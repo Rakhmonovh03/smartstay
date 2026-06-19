@@ -253,8 +253,6 @@ REGISTER_HTML = """<!DOCTYPE html>
             <div class="link-box" id="guest-link"></div>
             <div class="link-label" id="llDash">📊 Manager Dashboard</div>
             <div class="link-box" id="manager-link"></div>
-            <div class="link-label" id="llQr">📱 QR Codes</div>
-            <div class="link-box" id="qr-link"></div>
             <br>
             <button class="btn" id="dashBtn">Go to Dashboard →</button>
         </div>
@@ -273,7 +271,7 @@ REGISTER_HTML = """<!DOCTYPE html>
                 registerBtn:'Register Hotel →', errRequired:'❌ Please fill in all required fields',
                 haveAccount:'Already have an account?', loginLink:'Login',
                 successTitle:'Hotel Registered!', successSub:'Your system is ready! Save these links:',
-                llGuest:'👤 Guest Link', llDash:'📊 Manager Dashboard', llQr:'📱 QR Codes', dashBtn:'Go to Dashboard →'
+                llGuest:'👤 Guest Link', llDash:'📊 Manager Dashboard', dashBtn:'Go to Dashboard →'
             },
             ru: {
                 sub:'Зарегистрируйте ваш отель — готово за 3 минуты',
@@ -286,7 +284,7 @@ REGISTER_HTML = """<!DOCTYPE html>
                 registerBtn:'Зарегистрировать отель →', errRequired:'❌ Пожалуйста, заполните все обязательные поля',
                 haveAccount:'Уже есть аккаунт?', loginLink:'Войти',
                 successTitle:'Отель зарегистрирован!', successSub:'Система готова! Сохраните ссылки:',
-                llGuest:'👤 Ссылка для гостей', llDash:'📊 Панель управления', llQr:'📱 QR-коды', dashBtn:'Перейти в дашборд →'
+                llGuest:'👤 Ссылка для гостей', llDash:'📊 Панель управления', dashBtn:'Перейти в дашборд →'
             },
             tr: {
                 sub:'Otelinizi kaydedin — 3 dakikada hazır',
@@ -299,7 +297,7 @@ REGISTER_HTML = """<!DOCTYPE html>
                 registerBtn:'Oteli Kaydet →', errRequired:'❌ Lütfen zorunlu alanları doldurun',
                 haveAccount:'Hesabınız var mı?', loginLink:'Giriş Yap',
                 successTitle:'Otel Kaydedildi!', successSub:'Sisteminiz hazır! Linkleri kaydedin:',
-                llGuest:'👤 Misafir Linki', llDash:'📊 Yönetici Paneli', llQr:'📱 QR Kodlar', dashBtn:'Panele Git →'
+                llGuest:'👤 Misafir Linki', llDash:'📊 Yönetici Paneli', dashBtn:'Panele Git →'
             },
             uz: {
                 sub:"Mehmonxonangizni ro'yxatdan o'tkazing — 3 daqiqada tayyor",
@@ -312,7 +310,7 @@ REGISTER_HTML = """<!DOCTYPE html>
                 registerBtn:"Mehmonxonani ro'yxatdan o'tkazish →", errRequired:"❌ Iltimos, barcha majburiy maydonlarni to'ldiring",
                 haveAccount:"Hisobingiz bormi?", loginLink:'Kirish',
                 successTitle:"Mehmonxona ro'yxatdan o'tkazildi!", successSub:'Tizimingiz tayyor! Havolalarni saqlang:',
-                llGuest:'👤 Mehmon havolasi', llDash:'📊 Boshqaruv paneli', llQr:'📱 QR kodlar', dashBtn:"Panelga o'tish →"
+                llGuest:'👤 Mehmon havolasi', llDash:'📊 Boshqaruv paneli', dashBtn:"Panelga o'tish →"
             }
         };
 
@@ -324,7 +322,7 @@ REGISTER_HTML = """<!DOCTYPE html>
             const ids = ['sub','secHotel','lblName','lblSlug','hintSlug','lblPwd','lblInfo','hintInfo',
                          'secRooms','lblCount','hintCount','lblStart','hintStart','lblFloor','hintFloor','secTg','hintTgToken','hintTgChat',
                          'secInvite','lblInvite','hintInvite','registerBtn','haveAccount','loginLink',
-                         'successTitle','successSub','llGuest','llDash','llQr','dashBtn'];
+                         'successTitle','successSub','llGuest','llDash','dashBtn'];
             ids.forEach(id => {
                 const el = document.getElementById(id);
                 if (el && L[id] !== undefined) el.textContent = L[id];
@@ -383,7 +381,6 @@ REGISTER_HTML = """<!DOCTYPE html>
                 const base = window.location.origin;
                 document.getElementById('guest-link').textContent = base + '/hotel/' + slug;
                 document.getElementById('manager-link').textContent = base + '/hotel/' + slug + '/dashboard';
-                document.getElementById('qr-link').textContent = base + '/hotel/' + slug + '/qrcodes';
                 document.getElementById('form-view').style.display = 'none';
                 const sv = document.getElementById('success-view');
                 sv.style.display = 'block';

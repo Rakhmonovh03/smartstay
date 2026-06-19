@@ -493,6 +493,11 @@ DASHBOARD_HTML = """
         @media(max-width:480px) {{
             .stats {{ grid-template-columns:1fr 1fr; }}
         }}
+        @media print {{
+            .sidebar, .page-header .header-btns, .mobNav {{ display:none !important; }}
+            .main {{ margin-left:0 !important; padding:10px !important; }}
+            #qrFloorsContainer div, #qrCustomResult {{ page-break-inside:avoid; }}
+        }}
     </style>
 </head>
 <body>
@@ -1053,6 +1058,68 @@ DASHBOARD_HTML = """
             </div>
             <div id="roomsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px"></div>
         </div>
+
+        <!-- QR BUILDER VIEW -->
+        <div id="qrBuilderView" style="display:none">
+            <div class="page-header" style="margin-bottom:20px">
+                <div>
+                    <div class="page-title" id="qrBuilderTitle">📱 QR Builder</div>
+                    <div class="page-sub" id="qrBuilderSub">Generate QR codes for rooms and locations</div>
+                </div>
+                <div class="header-btns">
+                    <button class="btn btn-gold btn-sm" onclick="window.print()" id="qrPrintBtn">🖨️ Print All</button>
+                </div>
+            </div>
+
+            <!-- Custom Location QR -->
+            <div class="chart-card" style="margin-bottom:20px;padding:20px">
+                <div class="chart-title" id="qrCustomTitle">📍 Custom Location QR</div>
+                <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:flex-end">
+                    <div style="flex:1;min-width:200px">
+                        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px" id="qrCustomLabel">LOCATION NAME</div>
+                        <input id="qrCustomName" type="text" placeholder="e.g. Pool, Restaurant, Gym..."
+                            style="width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-family:inherit;font-size:14px;outline:none"
+                            onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"
+                            onkeypress="if(event.key==='Enter')generateCustomQR()">
+                    </div>
+                    <button class="btn btn-gold" onclick="generateCustomQR()" id="qrCustomBtn">Generate QR</button>
+                </div>
+                <div id="qrCustomResult" style="margin-top:16px;display:none">
+                    <div style="font-size:13px;color:var(--text3);margin-bottom:10px" id="qrCustomResultLabel">QR Code:</div>
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+                        <img id="qrCustomImg" src="" style="width:160px;height:160px;border-radius:8px;border:2px solid var(--border);background:#fff;padding:6px">
+                        <div>
+                            <div id="qrCustomNameDisplay" style="font-size:18px;font-weight:700;margin-bottom:6px"></div>
+                            <div id="qrCustomUrl" style="font-size:12px;color:var(--text3);word-break:break-all;margin-bottom:12px"></div>
+                            <button class="btn btn-dark btn-sm" onclick="downloadQR('qrCustomImg', document.getElementById('qrCustomName').value)" id="qrDownloadBtn">⬇️ Download</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floor QR Generator -->
+            <div class="chart-card" style="padding:20px">
+                <div class="chart-title" id="qrFloorTitle">🏢 Floor Room QR Generator</div>
+                <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+                    <div>
+                        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px" id="qrFloorLabel">FLOOR NUMBER</div>
+                        <input id="qrFloorNum" type="number" min="1" max="99" value="1"
+                            style="width:100px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-family:inherit;font-size:14px;outline:none"
+                            onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'">
+                    </div>
+                    <div>
+                        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px" id="qrRoomCountLabel">ROOMS ON THIS FLOOR</div>
+                        <input id="qrRoomCount" type="number" min="1" max="200" value="10"
+                            style="width:120px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-family:inherit;font-size:14px;outline:none"
+                            onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'">
+                    </div>
+                    <button class="btn btn-gold" onclick="generateFloorQRs()" id="qrFloorBtn">Generate Floor</button>
+                    <button class="btn btn-dark" onclick="clearFloorQRs()" id="qrClearBtn">Clear All</button>
+                </div>
+                <div style="margin-top:8px;font-size:12px;color:var(--text3)" id="qrFloorHint">e.g. Floor 2 + 10 rooms → rooms 201–210</div>
+                <div id="qrFloorsContainer" style="margin-top:20px"></div>
+            </div>
+        </div>
     </div>
 
     <!-- CONVERSATION MODAL -->
@@ -1294,7 +1361,7 @@ DASHBOARD_HTML = """
                 clearInterval(_scPollTimer); _scPollTimer = null;
             }}
             closeMobNav();
-            ['messagesView','roomsView','guestsView','ratingsView','analyticsView','requestsView','calendarView','staffView','servicesView','staffChatView'].forEach(id => {{
+            ['messagesView','roomsView','guestsView','ratingsView','analyticsView','requestsView','calendarView','staffView','servicesView','staffChatView','qrBuilderView'].forEach(id => {{
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
             }});
@@ -1418,7 +1485,7 @@ DASHBOARD_HTML = """
         }}
         function showMessagesView() {{
             ['roomsView','guestsView','ratingsView','analyticsView','requestsView',
-             'calendarView','staffView','servicesView','staffChatView'].forEach(id => {{
+             'calendarView','staffView','servicesView','staffChatView','qrBuilderView'].forEach(id => {{
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
             }});
@@ -2793,7 +2860,83 @@ DASHBOARD_HTML = """
         // ===== MISC =====
         function markRead() {{ apiJson(markReadUrl, {{method:'POST'}}).then(() => loadData()).catch(handleDashboardError); }}
         function goToEdit() {{ if (slug) window.location.href = '/hotel/' + slug + '/edit'; }}
-        function goToQR() {{ if (slug) window.open('/hotel/' + slug + '/qrcodes'); else window.open('/qrcodes'); }}
+        function goToQR() {{
+            hideAllViews();
+            document.getElementById('qrBuilderView').style.display = 'block';
+            document.getElementById('nt_qr').closest('.nav-item').classList.add('active');
+        }}
+
+        function generateCustomQR() {{
+            const name = document.getElementById('qrCustomName').value.trim();
+            if (!name || !slug) return;
+            const encoded = encodeURIComponent(name);
+            const url = '/hotel/' + slug + '/qr/' + encoded;
+            const fullUrl = window.location.origin + '/hotel/' + slug + '?room=' + encoded;
+            document.getElementById('qrCustomImg').src = url;
+            document.getElementById('qrCustomNameDisplay').textContent = name;
+            document.getElementById('qrCustomUrl').textContent = fullUrl;
+            document.getElementById('qrCustomResult').style.display = 'block';
+        }}
+
+        function downloadQR(imgId, name) {{
+            const img = document.getElementById(imgId);
+            const a = document.createElement('a');
+            a.href = img.src;
+            a.download = (name || 'qr') + '.png';
+            a.click();
+        }}
+
+        function generateFloorQRs() {{
+            const floor = parseInt(document.getElementById('qrFloorNum').value) || 1;
+            const count = parseInt(document.getElementById('qrRoomCount').value) || 10;
+            if (!slug) return;
+            const container = document.getElementById('qrFloorsContainer');
+            // Check if this floor section already exists; if so remove it first
+            const existingId = 'floor-section-' + floor;
+            const existing = document.getElementById(existingId);
+            if (existing) existing.remove();
+
+            const section = document.createElement('div');
+            section.id = existingId;
+            section.style.cssText = 'margin-bottom:28px';
+
+            const header = document.createElement('div');
+            header.style.cssText = 'font-size:14px;font-weight:700;color:var(--gold);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)';
+            header.textContent = '🏢 Floor ' + floor + ' — ' + count + ' rooms';
+            section.appendChild(header);
+
+            const grid = document.createElement('div');
+            grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px';
+
+            for (let i = 1; i <= count; i++) {{
+                const roomNum = floor * 100 + i;
+                const qrUrl = '/hotel/' + slug + '/qr/' + roomNum;
+                const card = document.createElement('div');
+                card.style.cssText = 'background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;cursor:pointer';
+                card.innerHTML = '<img src="' + qrUrl + '" style="width:100%;border-radius:6px;background:#fff;padding:4px;box-sizing:border-box" onerror="this.style.display=\'none\'">'
+                    + '<div style="margin-top:8px;font-size:13px;font-weight:700;color:var(--text)">Room ' + roomNum + '</div>'
+                    + '<button class="btn btn-dark btn-sm" style="margin-top:6px;font-size:11px;padding:4px 8px" onclick="downloadQR(this.previousElementSibling.previousElementSibling, \'' + roomNum + '\')">⬇️</button>';
+                // Fix download: pass img element
+                card.querySelector('button').onclick = function() {{
+                    const img = this.closest('div').querySelector('img');
+                    if (!img) return;
+                    const a = document.createElement('a');
+                    a.href = img.src;
+                    a.download = 'room-' + roomNum + '.png';
+                    a.click();
+                }};
+                grid.appendChild(card);
+            }}
+            section.appendChild(grid);
+            container.appendChild(section);
+
+            // Update floor number hint for next floor
+            document.getElementById('qrFloorNum').value = floor + 1;
+        }}
+
+        function clearFloorQRs() {{
+            document.getElementById('qrFloorsContainer').innerHTML = '';
+        }}
         function goToBuffet() {{ if (slug) window.location.href = '/hotel/' + slug + '/buffet'; }}
         function exportExcel() {{ if (slug) window.location.href = apiBase + '/export'; }}
         function exportGuests() {{ if (slug) window.location.href = apiBase + '/guests/export'; }}
@@ -2944,7 +3087,14 @@ DASHBOARD_HTML = """
                 analyticsPageTitle:'📊 Analytics', analyticsPageSub:'Hotel performance summary',
                 chartLblMessages:'Messages', chartLblRequests:'Requests', chartNoRatings:'No ratings yet',
                 funnelLblGuests:'🏨 Guests reg.', funnelLblMessaged:'💬 Sent a message', funnelLblRated:'⭐ Left a rating',
-                ratingsPageTitle:'⭐ Ratings', ratingsPageSub:'Guest scores and comments'
+                ratingsPageTitle:'⭐ Ratings', ratingsPageSub:'Guest scores and comments',
+                qrBuilderTitle:'📱 QR Builder', qrBuilderSub:'Generate QR codes for rooms and locations',
+                qrPrintBtn:'🖨️ Print All', qrCustomTitle:'📍 Custom Location QR', qrCustomLabel:'LOCATION NAME',
+                qrCustomBtn:'Generate QR', qrCustomResultLabel:'QR Code:',
+                qrDownloadBtn:'⬇️ Download', qrFloorTitle:'🏢 Floor Room QR Generator',
+                qrFloorLabel:'FLOOR NUMBER', qrRoomCountLabel:'ROOMS ON THIS FLOOR',
+                qrFloorBtn:'Generate Floor', qrClearBtn:'Clear All',
+                qrFloorHint:'e.g. Floor 2 + 10 rooms → rooms 201–210'
             }},
             ru: {{
                 nt_all:'Все сообщения', nt_urgent:'Срочные', nt_guest:'Гость', nt_rooms:'Номера',
@@ -2981,7 +3131,14 @@ DASHBOARD_HTML = """
                 analyticsPageTitle:'📊 Аналитика', analyticsPageSub:'Сводка по работе отеля',
                 chartLblMessages:'Сообщения', chartLblRequests:'Запросов', chartNoRatings:'Рейтингов пока нет',
                 funnelLblGuests:'🏨 Гостей зарег.', funnelLblMessaged:'💬 Написали в чат', funnelLblRated:'⭐ Оставили рейтинг',
-                ratingsPageTitle:'⭐ Рейтинги', ratingsPageSub:'Оценки и комментарии гостей'
+                ratingsPageTitle:'⭐ Рейтинги', ratingsPageSub:'Оценки и комментарии гостей',
+                qrBuilderTitle:'📱 QR Конструктор', qrBuilderSub:'Генерация QR-кодов для номеров и локаций',
+                qrPrintBtn:'🖨️ Печать', qrCustomTitle:'📍 QR для произвольного места', qrCustomLabel:'НАЗВАНИЕ МЕСТА',
+                qrCustomBtn:'Создать QR', qrCustomResultLabel:'QR-код:',
+                qrDownloadBtn:'⬇️ Скачать', qrFloorTitle:'🏢 Генератор QR по этажам',
+                qrFloorLabel:'НОМЕР ЭТАЖА', qrRoomCountLabel:'КОМНАТ НА ЭТАЖЕ',
+                qrFloorBtn:'Создать этаж', qrClearBtn:'Очистить всё',
+                qrFloorHint:'Напр. Этаж 2 + 10 комнат → комнаты 201–210'
             }},
             tr: {{
                 nt_all:'Tüm Mesajlar', nt_urgent:'Acil', nt_guest:'Misafir', nt_rooms:'Odalar',
@@ -3018,7 +3175,14 @@ DASHBOARD_HTML = """
                 analyticsPageTitle:'📊 Analitik', analyticsPageSub:'Otel performans özeti',
                 chartLblMessages:'Mesajlar', chartLblRequests:'Talepler', chartNoRatings:'Henüz değerlendirme yok',
                 funnelLblGuests:'🏨 Kayıtlı misafir', funnelLblMessaged:'💬 Mesaj gönderdi', funnelLblRated:'⭐ Değerlendirme bıraktı',
-                ratingsPageTitle:'⭐ Değerlendirmeler', ratingsPageSub:'Misafir puanları ve yorumlar'
+                ratingsPageTitle:'⭐ Değerlendirmeler', ratingsPageSub:'Misafir puanları ve yorumlar',
+                qrBuilderTitle:'📱 QR Oluşturucu', qrBuilderSub:'Odalar ve konumlar için QR kodu oluşturun',
+                qrPrintBtn:'🖨️ Yazdır', qrCustomTitle:'📍 Özel Konum QR', qrCustomLabel:'KONUM ADI',
+                qrCustomBtn:'QR Oluştur', qrCustomResultLabel:'QR Kodu:',
+                qrDownloadBtn:'⬇️ İndir', qrFloorTitle:'🏢 Kat Bazlı QR Oluşturucu',
+                qrFloorLabel:'KAT NUMARASI', qrRoomCountLabel:'BU KATTAKİ ODA SAYISI',
+                qrFloorBtn:'Kat Oluştur', qrClearBtn:'Temizle',
+                qrFloorHint:"Örn: Kat 2 + 10 oda → odalar 201–210"
             }},
             uz: {{
                 nt_all:"Barcha xabarlar", nt_urgent:"Shoshilinch", nt_guest:"Mehmon", nt_rooms:"Xonalar",
@@ -3055,7 +3219,14 @@ DASHBOARD_HTML = """
                 analyticsPageTitle:"📊 Analitika", analyticsPageSub:"Mehmonxona ishlashi xulosasi",
                 chartLblMessages:"Xabarlar", chartLblRequests:"So'rovlar", chartNoRatings:"Hali reytinglar yo'q",
                 funnelLblGuests:"🏨 Ro'yxatdagi mehmonlar", funnelLblMessaged:"💬 Xabar yozdi", funnelLblRated:"⭐ Reyting qoldirdi",
-                ratingsPageTitle:"⭐ Reytinglar", ratingsPageSub:"Mehmon ballari va sharhlari"
+                ratingsPageTitle:"⭐ Reytinglar", ratingsPageSub:"Mehmon ballari va sharhlari",
+                qrBuilderTitle:"📱 QR Yaratuvchi", qrBuilderSub:"Xonalar va joylar uchun QR kodlar yarating",
+                qrPrintBtn:"🖨️ Chop etish", qrCustomTitle:"📍 Maxsus joy QR kodi", qrCustomLabel:"JOY NOMI",
+                qrCustomBtn:"QR Yaratish", qrCustomResultLabel:"QR Kod:",
+                qrDownloadBtn:"⬇️ Yuklab olish", qrFloorTitle:"🏢 Qavat bo'yicha QR yaratuvchi",
+                qrFloorLabel:"QAVAT RAQAMI", qrRoomCountLabel:"BU QAVATDAGI XONALAR SONI",
+                qrFloorBtn:"Qavatni yaratish", qrClearBtn:"Hammasini tozalash",
+                qrFloorHint:"Masalan: 2-qavat + 10 xona → xonalar 201–210"
             }}
         }};
 
