@@ -2913,18 +2913,32 @@ DASHBOARD_HTML = """
                 const qrUrl = '/hotel/' + slug + '/qr/' + roomNum;
                 const card = document.createElement('div');
                 card.style.cssText = 'background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;cursor:pointer';
-                card.innerHTML = '<img src="' + qrUrl + '" style="width:100%;border-radius:6px;background:#fff;padding:4px;box-sizing:border-box" onerror="this.style.display=\'none\'">'
-                    + '<div style="margin-top:8px;font-size:13px;font-weight:700;color:var(--text)">Room ' + roomNum + '</div>'
-                    + '<button class="btn btn-dark btn-sm" style="margin-top:6px;font-size:11px;padding:4px 8px" onclick="downloadQR(this.previousElementSibling.previousElementSibling, \'' + roomNum + '\')">⬇️</button>';
-                // Fix download: pass img element
-                card.querySelector('button').onclick = function() {{
-                    const img = this.closest('div').querySelector('img');
-                    if (!img) return;
-                    const a = document.createElement('a');
-                    a.href = img.src;
-                    a.download = 'room-' + roomNum + '.png';
-                    a.click();
-                }};
+
+                const img = document.createElement('img');
+                img.src = qrUrl;
+                img.style.cssText = 'width:100%;border-radius:6px;background:#fff;padding:4px;box-sizing:border-box';
+                img.onerror = function() {{ this.style.display = 'none'; }};
+
+                const label = document.createElement('div');
+                label.style.cssText = 'margin-top:8px;font-size:13px;font-weight:700;color:var(--text)';
+                label.textContent = 'Room ' + roomNum;
+
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-dark btn-sm';
+                btn.style.cssText = 'margin-top:6px;font-size:11px;padding:4px 8px';
+                btn.textContent = '⬇️';
+                btn.onclick = (function(rn, im) {{
+                    return function() {{
+                        const a = document.createElement('a');
+                        a.href = im.src;
+                        a.download = 'room-' + rn + '.png';
+                        a.click();
+                    }};
+                }})(roomNum, img);
+
+                card.appendChild(img);
+                card.appendChild(label);
+                card.appendChild(btn);
                 grid.appendChild(card);
             }}
             section.appendChild(grid);
