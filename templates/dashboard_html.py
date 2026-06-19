@@ -1100,6 +1100,9 @@ DASHBOARD_HTML = """
         const apiUrl = slug ? apiBase + '/messages' : '/api/messages';
         const markReadUrl = slug ? apiBase + '/mark-read' : '/api/mark-read';
 
+        // Translation cache: key = msgId_lang, value = translated string
+        const _translCache = {{}};
+
         function esc(text) {{
             const d = document.createElement('div');
             d.appendChild(document.createTextNode(String(text)));
@@ -1224,22 +1227,42 @@ DASHBOARD_HTML = """
 
             tbody.innerHTML = '';
             page.forEach(m => {{
+                const cacheKey = (m.created_at || '') + '|' + (m.room || '') + '|' + (m.message || '').slice(0, 20);
                 const tr = document.createElement('tr');
                 tr.className = (m.priority === 'urgent' ? 'urgent-row ' : '') + (slug ? 'clickable' : '');
+                tr.dataset.msgkey = cacheKey;
+                const L = DASH_I18N[_dashLang] || DASH_I18N.en;
                 const roleLabel = m.role === 'user'
-                    ? '<span class="badge badge-user">👤 Misafir</span>'
+                    ? `<span class="badge badge-user">👤 ${{L.fUserLbl || 'Guest'}}</span>`
                     : m.role === 'staff'
-                        ? '<span class="badge badge-staff">👨‍💼 Personel</span>'
+                        ? `<span class="badge badge-staff">👨‍💼 ${{L.nt_staff || 'Staff'}}</span>`
                         : '<span class="badge badge-bot">🤖 AI</span>';
+                const priorityBadge = m.priority === 'urgent'
+                    ? `<span class="badge badge-urgent">🔴 ${{L.fUrgentLbl || 'Urgent'}}</span>`
+                    : `<span class="badge badge-normal">🟢 Normal</span>`;
                 tr.innerHTML = `
-                    <td>${{m.priority === 'urgent' ? '<span class="badge badge-urgent">🔴 Acil</span>' : '<span class="badge badge-normal">🟢 Normal</span>'}}</td>
+                    <td>${{priorityBadge}}</td>
                     <td><span class="room-tag">🚪 ${{esc(m.room)}}</span></td>
                     <td class="hide-mobile">${{roleLabel}}</td>
-                    <td><div class="msg-preview"></div></td>
+                    <td>
+                        <div class="msg-preview"></div>
+                        <div class="msg-translated" style="display:none;font-size:12px;color:var(--gold);margin-top:4px;font-style:italic"></div>
+                    </td>
                     <td class="hide-mobile" style="color:var(--text3);font-size:12px;white-space:nowrap">${{esc(m.created_at)}}</td>
-                    <td>${{slug ? '<button class="btn btn-dark btn-sm" onclick="openConversation(event,\\'' + esc(m.room) + '\\')">💬 Görüntüle</button>' : ''}}</td>
+                    <td style="white-space:nowrap;display:flex;gap:4px;align-items:center">
+                        <button class="btn btn-dark btn-sm translate-btn" title="Translate" onclick="translateMsg(event, this)" style="padding:5px 8px;font-size:13px">🌐</button>
+                        ${{slug ? '<button class="btn btn-dark btn-sm" onclick="openConversation(event,\\'' + esc(m.room) + '\\')">💬</button>' : ''}}
+                    </td>
                 `;
                 tr.querySelector('.msg-preview').textContent = m.message;
+                // Restore cached translation if exists
+                const cached = _translCache[cacheKey + '|' + _dashLang];
+                if (cached) {{
+                    const tDiv = tr.querySelector('.msg-translated');
+                    tDiv.textContent = '→ ' + cached;
+                    tDiv.style.display = 'block';
+                    tr.querySelector('.translate-btn').style.color = 'var(--gold)';
+                }}
                 if (slug) tr.onclick = (e) => {{
                     if (e.target.tagName === 'BUTTON') return;
                     openConversation(e, m.room);
@@ -3054,6 +3077,56 @@ DASHBOARD_HTML = """
             _dashLang = l;
             localStorage.setItem('ss_lang', l);
             applyDashLang();
+        }}
+
+        async function translateMsg(e, btn) {{
+            e.stopPropagation();
+            const tr = btn.closest('tr');
+            const cacheKey = (tr.dataset.msgkey || '') + '|' + _dashLang;
+            const td = btn.closest('td').previousElementSibling.previousElementSibling;
+            const preview = td.querySelector('.msg-preview');
+            const translated = td.querySelector('.msg-translated');
+            if (!preview || !translated) return;
+
+            // Toggle off if already showing
+            if (translated.style.display !== 'none') {{
+                translated.style.display = 'none';
+                btn.style.color = '';
+                return;
+            }}
+
+            // Already in cache — just show
+            if (_translCache[cacheKey]) {{
+                translated.textContent = '→ ' + _translCache[cacheKey];
+                translated.style.display = 'block';
+                btn.style.color = 'var(--gold)';
+                return;
+            }}
+
+            btn.textContent = '⏳';
+            btn.disabled = true;
+            try {{
+                const res = await fetch('/api/translate', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{ text: preview.textContent, target: _dashLang }})
+                }});
+                const data = await res.json();
+                if (data.translation) {{
+                    _translCache[cacheKey] = data.translation;
+                    translated.textContent = '→ ' + data.translation;
+                    translated.style.display = 'block';
+                    btn.style.color = 'var(--gold)';
+                }} else {{
+                    translated.textContent = '⚠️ Error';
+                    translated.style.display = 'block';
+                }}
+            }} catch(err) {{
+                translated.textContent = '⚠️ Network error';
+                translated.style.display = 'block';
+            }}
+            btn.textContent = '🌐';
+            btn.disabled = false;
         }}
 
         applyDashLang();

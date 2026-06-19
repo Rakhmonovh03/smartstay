@@ -625,21 +625,24 @@ async def hotel_chat_api(request: Request, slug: str, data: ChatRequest):
 
     if default_lang == "auto":
         lang_instruction = (
-            "LANGUAGE RULE (very important): Detect the language of the guest's last message "
+            "LANGUAGE RULE (critical): Detect the language of the guest's last message "
             "and always reply in that exact same language. "
             "Never mix languages in one reply. "
-            "If the guest writes in Russian — respond fully in Russian. "
-            "If in Arabic — respond in Arabic. If in English — English. "
-            "If in Turkish — Turkish. Etc. "
-            f"Supported languages for this hotel: {supported_langs}. "
-            "If the guest writes in an unsupported language, reply in English."
+            "You support all world languages — respond fluently in whatever language the guest uses: "
+            "Russian, English, Turkish, Uzbek, Arabic, Chinese, German, French, Spanish, Italian, "
+            "Portuguese, Japanese, Korean, Hindi, Persian, Azerbaijani, Kazakh, Kyrgyz, Turkmen, "
+            "Ukrainian, Polish, Dutch, Indonesian, Malay, Romanian, Czech, Hungarian, and any other language. "
+            "Always match the guest's language exactly."
         )
     else:
         lang_map = {
-            "en": "English", "ru": "Russian", "tr": "Turkish",
-            "ar": "Arabic", "de": "German", "fr": "French",
-            "es": "Spanish", "zh": "Chinese", "it": "Italian",
-            "pt": "Portuguese", "ja": "Japanese", "ko": "Korean"
+            "en": "English", "ru": "Russian", "tr": "Turkish", "uz": "Uzbek",
+            "ar": "Arabic", "zh": "Chinese", "de": "German", "fr": "French",
+            "es": "Spanish", "it": "Italian", "pt": "Portuguese",
+            "ja": "Japanese", "ko": "Korean", "hi": "Hindi", "fa": "Persian",
+            "az": "Azerbaijani", "kk": "Kazakh", "ky": "Kyrgyz", "tk": "Turkmen",
+            "uk": "Ukrainian", "pl": "Polish", "nl": "Dutch", "id": "Indonesian",
+            "ms": "Malay", "ro": "Romanian", "cs": "Czech", "hu": "Hungarian",
         }
         lang_name = lang_map.get(default_lang, default_lang.upper())
         lang_instruction = (
@@ -711,6 +714,35 @@ async def chat(request: Request, data: ChatRequest):
             yield f"data: {json.dumps({'error': 'Üzgünüm, şu an bağlanamıyorum. Lütfen bir dakika sonra tekrar deneyin.'})}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+# ===== TRANSLATE =====
+@app.post("/api/translate")
+@limiter.limit("60/minute")
+async def translate_text(request: Request):
+    data = await request.json()
+    text = (data.get("text") or "").strip()
+    target = data.get("target") or "en"
+    if not text:
+        return JSONResponse({"error": "No text"}, status_code=400)
+    lang_map = {
+        "en": "English", "ru": "Russian", "tr": "Turkish", "uz": "Uzbek",
+        "ar": "Arabic", "zh": "Chinese", "de": "German", "fr": "French",
+        "es": "Spanish", "it": "Italian", "pt": "Portuguese",
+        "ja": "Japanese", "ko": "Korean", "hi": "Hindi", "fa": "Persian",
+        "az": "Azerbaijani", "kk": "Kazakh", "ky": "Kyrgyz", "tk": "Turkmen",
+        "uk": "Ukrainian", "pl": "Polish", "nl": "Dutch", "id": "Indonesian",
+    }
+    lang_name = lang_map.get(target, "English")
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=500,
+            messages=[{"role": "user", "content":
+                f"Translate to {lang_name}. Return ONLY the translation, no explanations:\n\n{text}"}]
+        )
+        return {"translation": resp.content[0].text.strip()}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 # ===== SELF CHECK-IN =====
 @app.get("/hotel/{slug}/checkin", response_class=HTMLResponse)
@@ -964,26 +996,29 @@ async def auto_welcome(slug: str, room: str):
     ai_name = hotel.get("ai_name") or "AI Asistan"
     default_lang = hotel.get("default_language") or "auto"
     lang_map = {
-        "en": "English", "ru": "Russian", "tr": "Turkish",
-        "ar": "Arabic", "de": "German", "fr": "French",
-        "es": "Spanish", "zh": "Chinese", "it": "Italian",
-        "pt": "Portuguese", "ja": "Japanese", "ko": "Korean"
+        "en": "English", "ru": "Russian", "tr": "Turkish", "uz": "Uzbek",
+        "ar": "Arabic", "zh": "Chinese", "de": "German", "fr": "French",
+        "es": "Spanish", "it": "Italian", "pt": "Portuguese",
+        "ja": "Japanese", "ko": "Korean", "hi": "Hindi", "fa": "Persian",
+        "az": "Azerbaijani", "kk": "Kazakh", "ky": "Kyrgyz", "tk": "Turkmen",
+        "uk": "Ukrainian", "pl": "Polish", "nl": "Dutch", "id": "Indonesian",
+        "ms": "Malay", "ro": "Romanian", "cs": "Czech", "hu": "Hungarian",
     }
     if default_lang == "auto":
         # Try to guess from guest nationality
         nationality = (guest.get("nationality") or "").strip().lower()
         nat_lang_map = {
-            "russia": "Russian", "russian": "Russian",
-            "germany": "German", "german": "German", "deutsch": "German",
-            "france": "French", "french": "French",
-            "spain": "Spanish", "spanish": "Spanish",
-            "turkey": "Turkish", "turkish": "Turkish",
-            "china": "Chinese", "chinese": "Chinese",
-            "japan": "Japanese", "japanese": "Japanese",
-            "korea": "Korean", "korean": "Korean",
-            "arabic": "Arabic", "saudi": "Arabic", "uae": "Arabic",
-            "italy": "Italian", "italian": "Italian",
-            "portugal": "Portuguese", "brazil": "Portuguese",
+            "russia": "Russian", "ukraine": "Ukrainian", "belarus": "Russian",
+            "germany": "German", "france": "French", "spain": "Spanish",
+            "turkey": "Turkish", "china": "Chinese", "japan": "Japanese",
+            "korea": "Korean", "arabic": "Arabic", "saudi": "Arabic",
+            "uae": "Arabic", "italy": "Italian", "portugal": "Portuguese",
+            "brazil": "Portuguese", "uzbekistan": "Uzbek", "kazakhstan": "Kazakh",
+            "kyrgyzstan": "Kyrgyz", "azerbaijan": "Azerbaijani", "turkmenistan": "Turkmen",
+            "poland": "Polish", "netherlands": "Dutch", "indonesia": "Indonesian",
+            "india": "Hindi", "iran": "Persian", "malaysia": "Malay",
+            "romania": "Romanian", "czechia": "Czech", "hungary": "Hungarian",
+            "uk": "English", "usa": "English",
         }
         guess_lang = nat_lang_map.get(nationality, "English")
         lang_instruction = f"Write the welcome message in {guess_lang} (based on guest nationality)."

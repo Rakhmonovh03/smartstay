@@ -503,19 +503,34 @@ EDIT_HTML = """
         <div class="field">
             <label id="editLblDefaultLang">VARSAYILAN DİL</label>
             <select id="default_language" style="width:100%;background:#1f1f1f;border:1px solid #2a2a2a;border-radius:14px;padding:14px 16px;color:white;font-size:14px;outline:none;font-family:inherit">
-                <option value="auto">🌐 Otomatik (misafirin diliyle yazar)</option>
+                <option value="auto">🌐 Auto (detect guest language)</option>
                 <option value="en">🇬🇧 English</option>
                 <option value="ru">🇷🇺 Русский</option>
                 <option value="tr">🇹🇷 Türkçe</option>
+                <option value="uz">🇺🇿 O'zbek</option>
                 <option value="ar">🇸🇦 العربية</option>
+                <option value="zh">🇨🇳 中文</option>
                 <option value="de">🇩🇪 Deutsch</option>
                 <option value="fr">🇫🇷 Français</option>
                 <option value="es">🇪🇸 Español</option>
-                <option value="zh">🇨🇳 中文</option>
                 <option value="it">🇮🇹 Italiano</option>
                 <option value="pt">🇧🇷 Português</option>
                 <option value="ja">🇯🇵 日本語</option>
                 <option value="ko">🇰🇷 한국어</option>
+                <option value="hi">🇮🇳 हिन्दी</option>
+                <option value="fa">🇮🇷 فارسی</option>
+                <option value="az">🇦🇿 Azərbaycan</option>
+                <option value="kk">🇰🇿 Қазақша</option>
+                <option value="ky">🇰🇬 Кыргызча</option>
+                <option value="tk">🇹🇲 Türkmen</option>
+                <option value="uk">🇺🇦 Українська</option>
+                <option value="pl">🇵🇱 Polski</option>
+                <option value="nl">🇳🇱 Nederlands</option>
+                <option value="id">🇮🇩 Indonesia</option>
+                <option value="ms">🇲🇾 Melayu</option>
+                <option value="ro">🇷🇴 Română</option>
+                <option value="cs">🇨🇿 Čeština</option>
+                <option value="hu">🇭🇺 Magyar</option>
             </select>
             <div class="hint">Otomatik: AI misafirin yazdığı dili algılar ve o dilde yanıt verir</div>
         </div>
