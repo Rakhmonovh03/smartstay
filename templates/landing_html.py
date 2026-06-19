@@ -181,7 +181,7 @@ LANDING_HTML = """<!DOCTYPE html>
             <div class="hero-stat-label" id="statAi">AI Assistant</div>
         </div>
         <div class="hero-stat">
-            <div class="hero-stat-num">4</div>
+            <div class="hero-stat-num">27</div>
             <div class="hero-stat-label" id="statLang">Languages</div>
         </div>
         <div class="hero-stat">
