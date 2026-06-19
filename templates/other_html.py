@@ -211,11 +211,7 @@ REGISTER_HTML = """<!DOCTYPE html>
                     <div class="hint" id="hintStart">e.g. 101 or 1</div>
                 </div>
             </div>
-            <div class="field">
-                <label id="lblFloor">ROOMS PER FLOOR</label>
-                <input type="number" id="rooms_per_floor" value="0" min="0" max="100" placeholder="0">
-                <div class="hint" id="hintFloor">0 = sequential (101,102,103…). E.g. 4 → floor 1: 101-104, floor 2: 201-204</div>
-            </div>
+            <input type="hidden" id="rooms_per_floor" value="0">
 
             <div class="section-title" id="secTg">Telegram Notifications (Optional)</div>
             <div class="tg-grid">
@@ -265,7 +261,6 @@ REGISTER_HTML = """<!DOCTYPE html>
                 secHotel:'Hotel Info', lblName:'HOTEL NAME', lblSlug:'URL ID (SLUG)', hintSlug:'Lowercase letters and hyphens only',
                 lblPwd:'MANAGER PASSWORD', lblInfo:'HOTEL INFORMATION', hintInfo:'The more detail you provide, the better the AI responds',
                 secRooms:'Room Configuration', lblCount:'ROOM COUNT', hintCount:'Total number of rooms', lblStart:'FIRST ROOM NUMBER', hintStart:'e.g. 101 or 1',
-                lblFloor:'ROOMS PER FLOOR', hintFloor:'0 = sequential (101,102,103…). E.g. 4 → floor 1: 101-104, floor 2: 201-204',
                 secTg:'Telegram Notifications (Optional)', hintTgToken:'Get from @BotFather', hintTgChat:'Get from @userinfobot',
                 secInvite:'Invite Code', lblInvite:'INVITE CODE', hintInvite:'Code provided by SmartStay team',
                 registerBtn:'Register Hotel →', errRequired:'❌ Please fill in all required fields',
@@ -278,7 +273,6 @@ REGISTER_HTML = """<!DOCTYPE html>
                 secHotel:'Данные отеля', lblName:'НАЗВАНИЕ ОТЕЛЯ', lblSlug:'URL (SLUG)', hintSlug:'Только строчные буквы и дефисы',
                 lblPwd:'ПАРОЛЬ МЕНЕДЖЕРА', lblInfo:'ИНФОРМАЦИЯ ОБ ОТЕЛЕ', hintInfo:'Чем подробнее, тем лучше AI отвечает',
                 secRooms:'Конфигурация номеров', lblCount:'КОЛИЧЕСТВО НОМЕРОВ', hintCount:'Общее число номеров', lblStart:'ПЕРВЫЙ НОМЕР КОМНАТЫ', hintStart:'Напр. 101 или 1',
-                lblFloor:'КОМНАТ НА ЭТАЖЕ', hintFloor:'0 = последовательно (101,102,103…). Напр. 4 → этаж 1: 101-104, этаж 2: 201-204',
                 secTg:'Уведомления Telegram (необязательно)', hintTgToken:'Получить у @BotFather', hintTgChat:'Получить у @userinfobot',
                 secInvite:'Инвайт-код', lblInvite:'ИНВАЙТ-КОД', hintInvite:'Код от команды SmartStay',
                 registerBtn:'Зарегистрировать отель →', errRequired:'❌ Пожалуйста, заполните все обязательные поля',
@@ -291,7 +285,6 @@ REGISTER_HTML = """<!DOCTYPE html>
                 secHotel:'Otel Bilgileri', lblName:'OTELİN ADI', lblSlug:'URL KISALTMASI (SLUG)', hintSlug:'Sadece küçük harf ve tire kullanın',
                 lblPwd:'YÖNETİCİ ŞİFRESİ', lblInfo:'OTEL BİLGİLERİ', hintInfo:'Ne kadar detaylı olursa AI o kadar iyi yanıt verir',
                 secRooms:'Oda Yapılandırması', lblCount:'ODA SAYISI', hintCount:'Toplam oda adedi', lblStart:'İLK ODA NUMARASI', hintStart:'Örn: 101 veya 1',
-                lblFloor:'KATTAKİ ODA SAYISI', hintFloor:"0 = sıralı (101,102,103…). Örn: 4 → kat 1: 101-104, kat 2: 201-204",
                 secTg:'Telegram Bildirimleri (İsteğe Bağlı)', hintTgToken:"@BotFather'dan alın", hintTgChat:"@userinfobot'tan alın",
                 secInvite:'Davet Kodu', lblInvite:'DAVET KODU', hintInvite:'SmartStay ekibinden aldığınız kod',
                 registerBtn:'Oteli Kaydet →', errRequired:'❌ Lütfen zorunlu alanları doldurun',
@@ -304,7 +297,6 @@ REGISTER_HTML = """<!DOCTYPE html>
                 secHotel:"Mehmonxona ma'lumotlari", lblName:'MEHMONXONA NOMI', lblSlug:'URL ID (SLUG)', hintSlug:"Faqat kichik harflar va defislar",
                 lblPwd:'MENEJER PAROLI', lblInfo:"MEHMONXONA HAQIDA MA'LUMOT", hintInfo:"Qancha batafsil bo'lsa, AI shuncha yaxshi javob beradi",
                 secRooms:'Xonalar konfiguratsiyasi', lblCount:'XONALAR SONI', hintCount:'Jami xonalar soni', lblStart:'BIRINCHI XONA RAQAMI', hintStart:'Masalan: 101 yoki 1',
-                lblFloor:'QAVATDAGI XONALAR SONI', hintFloor:"0 = ketma-ket (101,102,103…). Masalan: 4 → 1-qavat: 101-104, 2-qavat: 201-204",
                 secTg:"Telegram bildirishnomalar (ixtiyoriy)", hintTgToken:"@BotFather dan oling", hintTgChat:"@userinfobot dan oling",
                 secInvite:'Taklif kodi', lblInvite:'TAKLIF KODI', hintInvite:'SmartStay jamoasidan olingan kod',
                 registerBtn:"Mehmonxonani ro'yxatdan o'tkazish →", errRequired:"❌ Iltimos, barcha majburiy maydonlarni to'ldiring",
@@ -320,7 +312,7 @@ REGISTER_HTML = """<!DOCTYPE html>
         function applyLang() {
             const L = I18N[lang];
             const ids = ['sub','secHotel','lblName','lblSlug','hintSlug','lblPwd','lblInfo','hintInfo',
-                         'secRooms','lblCount','hintCount','lblStart','hintStart','lblFloor','hintFloor','secTg','hintTgToken','hintTgChat',
+                         'secRooms','lblCount','hintCount','lblStart','hintStart','secTg','hintTgToken','hintTgChat',
                          'secInvite','lblInvite','hintInvite','registerBtn','haveAccount','loginLink',
                          'successTitle','successSub','llGuest','llDash','dashBtn'];
             ids.forEach(id => {
