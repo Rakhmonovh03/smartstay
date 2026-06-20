@@ -2,12 +2,12 @@ from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse, Response, JSONResponse
 from anthropic import Anthropic
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-import json, sqlite3, asyncio, io, smtplib, ssl, os
+import json, sqlite3, asyncio, io, smtplib, ssl, os, hmac, hashlib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import date
@@ -16,7 +16,7 @@ import qrcode
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 
-from config import MANAGER_PASSWORD, ADMIN_PASSWORD, INVITE_CODE, PLAN_LIMITS, SECURE_COOKIES, DATABASE_PATH, CRON_SECRET
+from config import MANAGER_PASSWORD, ADMIN_PASSWORD, INVITE_CODE, PLAN_LIMITS, SECURE_COOKIES, DATABASE_PATH, CRON_SECRET, GUEST_TOKEN_SECRET
 from database import (
     init_db, save_message, get_messages,
     create_hotel, get_hotel, get_all_hotels, get_hotel_messages,
@@ -80,6 +80,24 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 client = Anthropic()
 
 
+# ===== GUEST TOKEN HELPERS =====
+# Guest cookie: name=guest_{slug}, value="{room}:{hmac}"
+# The HMAC signs slug+room so a guest in room 101 can't forge a token for 102.
+
+def _make_guest_token(slug: str, room: str) -> str:
+    key = GUEST_TOKEN_SECRET.encode()
+    msg = f"{slug}:{room}".encode()
+    return hmac.new(key, msg, hashlib.sha256).hexdigest()
+
+def _is_guest_for_room(request: Request, slug: str, room: str) -> bool:
+    cookie_val = request.cookies.get(f"guest_{slug}", "")
+    if not cookie_val or ":" not in cookie_val:
+        return False
+    stored_room, stored_hmac = cookie_val.split(":", 1)
+    expected = _make_guest_token(slug, room)
+    return stored_room == room and hmac.compare_digest(stored_hmac, expected)
+
+
 # ===== EMAIL HELPER =====
 async def send_email(hotel: dict, subject: str, body_html: str) -> bool:
     """Send an HTML email using hotel's own SMTP config. Returns True on success."""
@@ -133,9 +151,9 @@ init_db()
 
 # ===== PYDANTIC MODELS =====
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(..., max_length=5000)
     history: List[dict] = []
-    room: str = "101"
+    room: str = Field(default="101", max_length=20)
 
 class RegisterRequest(BaseModel):
     slug: str
@@ -266,7 +284,8 @@ def login_page():
     return get_login_html()
 
 @app.post("/api/login")
-def api_login(data: LoginRequest, response: Response):
+@limiter.limit("5/minute")
+def api_login(data: LoginRequest, request: Request, response: Response):
     if data.password == MANAGER_PASSWORD:
         response.set_cookie("manager_auth", "yes", max_age=86400,
                             httponly=True, secure=SECURE_COOKIES, samesite="lax")
@@ -281,7 +300,8 @@ def hotel_login_page(slug: str):
     return get_login_html(hotel["name"])
 
 @app.post("/api/hotel-login")
-def api_hotel_login(data: HotelLoginRequest):
+@limiter.limit("5/minute")
+def api_hotel_login(data: HotelLoginRequest, request: Request):
     hotel = get_hotel(data.slug)
     if hotel and verify_password(data.password, hotel["password"]):
         migrate_password_if_needed(data.slug, data.password, hotel["password"])
@@ -323,11 +343,25 @@ def hotel_dashboard(slug: str, request: Request):
 
 # ===== HOTEL CHAT =====
 @app.get("/hotel/{slug}", response_class=HTMLResponse)
-def hotel_chat(slug: str):
+def hotel_chat(slug: str, room: str = "101"):
     hotel = get_hotel(slug)
     if not hotel:
         return HTMLResponse("❌ Otel bulunamadı", status_code=404)
-    return get_chat_html(hotel["name"], slug, hotel.get("default_language") or "en")
+    # Sanitise room before signing — reject anything non-alphanumeric
+    room = room.strip()
+    if not room.isalnum() or len(room) > 20:
+        room = "101"
+    html = get_chat_html(hotel["name"], slug, hotel.get("default_language") or "en")
+    resp = HTMLResponse(html)
+    resp.set_cookie(
+        key=f"guest_{slug}",
+        value=f"{room}:{_make_guest_token(slug, room)}",
+        httponly=True,
+        secure=SECURE_COOKIES,
+        samesite="lax",  # lax allows first-visit from QR scan (top-level navigation)
+        max_age=86400 * 7,
+    )
+    return resp
 
 # ===== PWA =====
 @app.get("/hotel/{slug}/manifest.json")
@@ -494,6 +528,8 @@ async def hotel_chat_api(request: Request, slug: str, data: ChatRequest):
 
     if not message:
         return JSONResponse({"error": "Empty message"}, status_code=400)
+    if not room.isalnum():
+        return JSONResponse({"error": "Geçersiz oda numarası"}, status_code=400)
 
     # --- Plan limit check ---
     plan = hotel.get("plan", "trial")
@@ -691,6 +727,8 @@ async def chat(request: Request, data: ChatRequest):
 
     if not message:
         return JSONResponse({"error": "Empty message"}, status_code=400)
+    if not room.isalnum():
+        return JSONResponse({"error": "Geçersiz oda numarası"}, status_code=400)
 
     save_message(room, "user", message)
     history.append({"role": "user", "content": message})
@@ -742,7 +780,8 @@ async def translate_text(request: Request):
         )
         return {"translation": resp.content[0].text.strip()}
     except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+        print(f"[translate error] {e}")
+        return JSONResponse({"error": "Bir hata oluştu, lütfen tekrar deneyin"}, status_code=500)
 
 # ===== SELF CHECK-IN =====
 @app.get("/hotel/{slug}/checkin", response_class=HTMLResponse)
@@ -848,11 +887,13 @@ def api_guest_status(slug: str, guest_id: int, data: GuestStatusRequest, request
 
 # ===== RATING =====
 @app.get("/api/hotel/{slug}/room/{room}/review-needed")
-def review_needed(slug: str, room: str):
+def review_needed(slug: str, room: str, request: Request):
     """
     Returns whether a proactive review request should be shown to the guest.
-    True when: guest checked in 1+ day ago, hasn't been reviewed yet.
+    Accessible to: hotel manager/staff OR the guest who owns this room (via QR cookie).
     """
+    if not get_auth_role(request, slug)[0] and not _is_guest_for_room(request, slug, room):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
     guest = get_guest_by_room(slug, room)
     if not guest or guest["reviewed"]:
         return {"show": False}
@@ -944,13 +985,13 @@ def room_new_messages(slug: str, room: str, since_id: int = 0, request: Request 
 
 # ===== PUBLIC GUEST CHAT HISTORY =====
 @app.get("/api/hotel/{slug}/room/{room}/history")
-def room_history_public(slug: str, room: str):
+def room_history_public(slug: str, room: str, request: Request):
     """
-    Public endpoint — no manager auth required.
-    Returns the last 50 messages for this room so guests can reload
-    their conversation when switching devices or clearing browser data.
-    The "auth" is implicit: guest has slug + room from the QR code.
+    Returns the last 50 messages for this room.
+    Accessible to: hotel manager/staff OR the guest who owns this room (via QR cookie).
     """
+    if not get_auth_role(request, slug)[0] and not _is_guest_for_room(request, slug, room):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
     hotel = get_hotel(slug)
     if not hotel:
         return JSONResponse({"error": "Hotel not found"}, status_code=404)
@@ -2116,7 +2157,8 @@ def admin_login_page():
     return get_admin_login_html()
 
 @app.post("/api/admin/login")
-def api_admin_login(data: AdminLoginRequest, response: Response):
+@limiter.limit("5/minute")
+def api_admin_login(data: AdminLoginRequest, request: Request, response: Response):
     if data.password == ADMIN_PASSWORD:
         response.set_cookie("admin_auth", "yes", max_age=86400,
                             httponly=True, secure=SECURE_COOKIES, samesite="strict")
@@ -2397,7 +2439,8 @@ class StaffPasswordReset(BaseModel):
 # ===== STAFF ENDPOINTS =====
 
 @app.post("/api/hotel/{slug}/staff/login")
-def staff_login(slug: str, data: StaffLoginRequest, response: Response):
+@limiter.limit("5/minute")
+def staff_login(slug: str, data: StaffLoginRequest, request: Request, response: Response):
     hotel = get_hotel(slug)
     if not hotel:
         return JSONResponse({"error": "Hotel not found"}, status_code=404)
@@ -2510,7 +2553,8 @@ async def stripe_webhook(request: Request):
     except stripe.error.SignatureVerificationError:
         return JSONResponse({"error": "Invalid signature"}, status_code=400)
     except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=400)
+        print(f"[stripe webhook error] {e}")
+        return JSONResponse({"error": "Bir hata oluştu, lütfen tekrar deneyin"}, status_code=400)
 
     etype = event["type"]
     data  = event["data"]["object"]
@@ -2603,7 +2647,8 @@ async def billing_checkout(slug: str, request: Request):
         )
         return {"checkout_url": session.url}
     except stripe.error.StripeError as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+        print(f"[stripe checkout error] {e}")
+        return JSONResponse({"error": "Bir hata oluştu, lütfen tekrar deneyin"}, status_code=500)
 
 
 @app.get("/api/hotel/{slug}/billing/portal")
@@ -2628,7 +2673,8 @@ async def billing_portal(slug: str, request: Request):
         )
         return RedirectResponse(session.url, status_code=303)
     except stripe.error.StripeError as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+        print(f"[stripe portal error] {e}")
+        return JSONResponse({"error": "Bir hata oluştu, lütfen tekrar deneyin"}, status_code=500)
 
 
 @app.get("/api/hotel/{slug}/billing/info")
@@ -2762,7 +2808,8 @@ async def buffet_analyze(slug: str, request: Request, photo: UploadFile = File(.
     try:
         result = await asyncio.to_thread(analyze_buffet_photo, b64, media_type)
     except Exception as e:
-        return JSONResponse({"error": f"AI analysis failed: {str(e)}"}, status_code=500)
+        print(f"[buffet analysis error] {e}")
+        return JSONResponse({"error": "Bir hata oluştu, lütfen tekrar deneyin"}, status_code=500)
 
     scan_id = save_buffet_scan(slug, result)
     return {"ok": True, "scan_id": scan_id, "result": result}

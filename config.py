@@ -1,24 +1,26 @@
 import os
-import warnings
 from dotenv import load_dotenv
 
 load_dotenv()
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
+# HMAC key for signing guest room cookies. Falls back to the Anthropic key so
+# no extra env var is needed — but you can set GUEST_TOKEN_SECRET separately.
+GUEST_TOKEN_SECRET = os.getenv("GUEST_TOKEN_SECRET") or ANTHROPIC_API_KEY or "smartstay-guest"
+
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
-# Passwords — warn loudly if using insecure defaults
 _manager_pw = os.getenv("MANAGER_PASSWORD")
 if not _manager_pw:
-    warnings.warn("⚠️  MANAGER_PASSWORD not set — using insecure default. Set it in .env before production!", stacklevel=2)
-MANAGER_PASSWORD = _manager_pw or "smartstay2025"
+    raise RuntimeError("MANAGER_PASSWORD not set. Add it to .env before starting the app.")
+MANAGER_PASSWORD = _manager_pw
 
 _admin_pw = os.getenv("ADMIN_PASSWORD")
 if not _admin_pw:
-    warnings.warn("⚠️  ADMIN_PASSWORD not set — using insecure default. Set it in .env before production!", stacklevel=2)
-ADMIN_PASSWORD = _admin_pw or "admin_smartstay_2026"
+    raise RuntimeError("ADMIN_PASSWORD not set. Add it to .env before starting the app.")
+ADMIN_PASSWORD = _admin_pw
 
 DATABASE_PATH = os.getenv("DATABASE_PATH", "smartstay.db")
 
