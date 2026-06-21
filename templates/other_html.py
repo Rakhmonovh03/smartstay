@@ -870,7 +870,7 @@ EDIT_HTML = """
                 editTgWebhookTitle:'Telegram Webhook',
                 editTgWebhookDesc:"Bot token saqlangandan keyin webhookni faollashtiring. Mehmonlarga Telegram orqali javob berishingiz mumkin.",
                 editSecAI:'AI Assistent sozlamalari', editLblAIName:"AI ASSISTENT NOMI",
-                editHintAI:'"Aria", "Luna", "Max" kabi nomlar bilan mehmonlarga o\'zini tanishtiradi',
+                editHintAI:`"Aria", "Luna", "Max" kabi nomlar bilan mehmonlarga o'zini tanishtiradi`,
                 editSecLang:'🌐 Til sozlamalari', editLblDefaultLang:"STANDART TIL",
                 editLblSupportedLangs:"QOLLAB-QUVVATLANADIGAN TILLAR (vergul bilan)",
                 editSecEmail:'📧 Email bildirishnomalari (SMTP)',
