@@ -173,6 +173,17 @@ ADMIN_HTML = """
             </div>
         </div>
 
+        <!-- Promo video (shown on the landing page) -->
+        <div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:20px;margin-bottom:24px">
+            <div style="font-weight:700;font-size:15px;color:#C9A84C;margin-bottom:4px" data-i18n="promoTitle">🎬 Promo video (landing page)</div>
+            <div style="font-size:12px;color:#666;margin-bottom:12px" data-i18n="promoHint">Paste a YouTube or MP4 link. It appears as “Watch video” on the homepage. Leave empty to hide.</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <input id="promoVideoInput" type="url" placeholder="https://youtube.com/watch?v=..."
+                    style="flex:1;min-width:240px;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#eee;padding:10px 14px;font-size:14px;outline:none">
+                <button onclick="savePromoVideo()" data-i18n="promoSave" style="padding:10px 20px;background:#C9A84C;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">💾 Save</button>
+            </div>
+        </div>
+
         <div class="revenue-card">
             <div>
                 <h3 data-i18n="revMonthly">💰 Aylık Tahmini Gelir</h3>
@@ -256,6 +267,7 @@ ADMIN_HTML = """
                 assign:'Assign', fillFields:'Fill in all fields', selectHotelErr:'Select a hotel',
                 ownerCreated:'✅ Owner created!', hotelLinked:'✅ Hotel linked!', err:'Error',
                 deleteConfirm:'Delete hotel {n}?', deleteWarn:'All messages will also be deleted!',
+                promoTitle:'🎬 Promo video (landing page)', promoHint:'Paste a YouTube or MP4 link. It appears as “Watch video” on the homepage. Leave empty to hide.', promoSave:'💾 Save', promoSaved:'✅ Video saved!',
             },
             ru: {
                 navHotels:'🏨 Все отели', navOwners:'👥 Владельцы', navAddHotel:'➕ Добавить отель', navLogout:'🚪 Выход',
@@ -275,6 +287,7 @@ ADMIN_HTML = """
                 assign:'Привязать', fillFields:'Заполните все поля', selectHotelErr:'Выберите отель',
                 ownerCreated:'✅ Владелец создан!', hotelLinked:'✅ Отель привязан!', err:'Ошибка',
                 deleteConfirm:'Удалить отель {n}?', deleteWarn:'Все сообщения тоже будут удалены!',
+                promoTitle:'🎬 Промо-видео (главная страница)', promoHint:'Вставь ссылку на YouTube или MP4. На главной появится кнопка «Смотреть видео». Пусто — кнопка скрыта.', promoSave:'💾 Сохранить', promoSaved:'✅ Видео сохранено!',
             },
             tr: {
                 navHotels:'🏨 Tüm Oteller', navOwners:'👥 Sahipler', navAddHotel:'➕ Otel Ekle', navLogout:'🚪 Çıkış',
@@ -294,6 +307,7 @@ ADMIN_HTML = """
                 assign:'Bağla', fillFields:'Tüm alanları doldurun', selectHotelErr:'Bir otel seçin',
                 ownerCreated:'✅ Sahip oluşturuldu!', hotelLinked:'✅ Otel bağlandı!', err:'Hata',
                 deleteConfirm:'{n} otelini silmek istediğinizden emin misiniz?', deleteWarn:'Tüm mesajlar da silinecek!',
+                promoTitle:'🎬 Tanıtım videosu (ana sayfa)', promoHint:'Bir YouTube veya MP4 linki yapıştırın. Ana sayfada “Videoyu izle” olarak görünür. Boş bırakırsanız gizlenir.', promoSave:'💾 Kaydet', promoSaved:'✅ Video kaydedildi!',
             },
             uz: {
                 navHotels:'🏨 Barcha mehmonxonalar', navOwners:'👥 Egalar', navAddHotel:'➕ Mehmonxona qo‘shish', navLogout:'🚪 Chiqish',
@@ -313,6 +327,7 @@ ADMIN_HTML = """
                 assign:'Bog‘lash', fillFields:'Barcha maydonlarni to‘ldiring', selectHotelErr:'Mehmonxonani tanlang',
                 ownerCreated:'✅ Ega yaratildi!', hotelLinked:'✅ Mehmonxona bog‘landi!', err:'Xato',
                 deleteConfirm:'{n} mehmonxonasini o‘chirasizmi?', deleteWarn:'Barcha xabarlar ham o‘chiriladi!',
+                promoTitle:'🎬 Reklama videosi (bosh sahifa)', promoHint:'YouTube yoki MP4 havolasini joylang. Bosh sahifada “Videoni ko‘rish” bo‘lib chiqadi. Bo‘sh qoldirsangiz yashiriladi.', promoSave:'💾 Saqlash', promoSaved:'✅ Video saqlandi!',
             },
         };
         let _adminLang = localStorage.getItem('ss_lang');
@@ -412,6 +427,31 @@ ADMIN_HTML = """
             });
         }
         loadHotels();
+
+        // ===== PROMO VIDEO =====
+        async function loadSettings() {
+            try {
+                const r = await fetch('/api/admin/settings', {credentials:'include'});
+                const d = await r.json();
+                const inp = document.getElementById('promoVideoInput');
+                if (inp && d.promo_video) inp.value = d.promo_video;
+            } catch(e) {}
+        }
+        loadSettings();
+
+        async function savePromoVideo() {
+            const inp = document.getElementById('promoVideoInput');
+            try {
+                const r = await fetch('/api/admin/settings', {
+                    method: 'POST', credentials: 'include',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({promo_video: inp.value.trim()})
+                });
+                const d = await r.json();
+                if (d.ok) showToast(T('promoSaved'), 'green');
+                else showToast('❌ ' + (d.error || T('err')), 'red');
+            } catch(e) { showToast('❌ ' + T('err'), 'red'); }
+        }
 
         async function changePlan(slug, selectEl) {
             const plan = selectEl.value;

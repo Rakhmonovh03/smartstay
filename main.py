@@ -37,6 +37,7 @@ from database import (
     create_staff, get_staff_list, get_staff_by_credentials,
     get_staff_by_id, update_staff_password, delete_staff,
     update_hotel_stripe, get_hotel_by_stripe_customer, stripe_event_already_processed,
+    get_setting, set_setting,
     create_owner, get_owner_by_email, get_owner_by_id, get_all_owners,
     assign_hotel_to_owner, remove_hotel_from_owner,
     get_owner_hotels, get_hotel_owner_ids,
@@ -262,6 +263,11 @@ def health():
 @app.get("/", response_class=HTMLResponse)
 def home():
     return get_landing_html()
+
+@app.get("/api/landing-config")
+def landing_config():
+    """Public: data the landing page needs (e.g. promo video URL)."""
+    return {"promo_video": get_setting("promo_video", "")}
 
 # ===== РЕГИСТРАЦИЯ =====
 @app.get("/register", response_class=HTMLResponse)
@@ -2170,6 +2176,27 @@ def api_admin_delete_hotel(slug: str, request: Request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     delete_hotel(slug)
     return {"ok": True}
+
+# ===== ADMIN SETTINGS (landing promo video, etc.) =====
+class SettingsUpdate(BaseModel):
+    promo_video: str = ""
+
+@app.get("/api/admin/settings")
+def api_admin_get_settings(request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    return {"promo_video": get_setting("promo_video", "")}
+
+@app.post("/api/admin/settings")
+def api_admin_set_settings(data: SettingsUpdate, request: Request):
+    if not _is_admin(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    url = data.promo_video.strip()
+    # Only allow empty (to clear) or http(s) URLs.
+    if url and not (url.startswith("http://") or url.startswith("https://")):
+        return JSONResponse({"error": "URL http:// veya https:// ile başlamalı"}, status_code=400)
+    set_setting("promo_video", url)
+    return {"ok": True, "promo_video": url}
 
 @app.get("/api/admin/hotels")
 def api_admin_hotels(request: Request):

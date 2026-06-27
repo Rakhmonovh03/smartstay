@@ -277,6 +277,14 @@ def init_db():
         )
     """)
 
+    # Global app settings (key/value) — e.g. landing-page promo video URL.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS app_settings (
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL DEFAULT ''
+        )
+    """)
+
     # Internal staff-to-staff chat by channel/department
     conn.execute("""
         CREATE TABLE IF NOT EXISTS staff_chat (
@@ -517,6 +525,26 @@ def update_hotel_stripe(slug: str, stripe_customer_id: str = None,
         values.append(slug)
         conn.execute(f"UPDATE hotels SET {', '.join(fields)} WHERE slug=?", values)
         conn.commit()
+    conn.close()
+
+
+def get_setting(key: str, default: str = "") -> str:
+    """Read a global app setting (key/value), or return default."""
+    conn = sqlite3.connect(DATABASE_PATH)
+    row = conn.execute("SELECT value FROM app_settings WHERE key=?", (key,)).fetchone()
+    conn.close()
+    return row[0] if row else default
+
+
+def set_setting(key: str, value: str) -> None:
+    """Create or update a global app setting."""
+    conn = sqlite3.connect(DATABASE_PATH)
+    conn.execute(
+        "INSERT INTO app_settings (key, value) VALUES (?, ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (key, value)
+    )
+    conn.commit()
     conn.close()
 
 

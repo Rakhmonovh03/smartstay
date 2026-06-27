@@ -1,6 +1,6 @@
 @echo off
 cd /d "C:\Users\Victus\Desktop\smartstay"
 git add -A
-git commit -m "Security (signed cookies, XSS fixes), bug fixes, full i18n (chat/public/admin), QR in dashboard, staff-reply delivery fix"
+git commit -m "Landing: promo video (admin-managed) + Watch video button + hero polish"
 git push
 pause

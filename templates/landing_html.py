@@ -72,6 +72,20 @@ LANDING_HTML = """<!DOCTYPE html>
         .btn-hero-primary:hover { transform:translateY(-2px); box-shadow:0 12px 40px rgba(201,168,76,.35); }
         .btn-hero-secondary { background:transparent; color:var(--text); border:1px solid rgba(255,255,255,.15); }
         .btn-hero-secondary:hover { border-color:var(--gold); color:var(--gold); }
+        /* Watch-video button */
+        .btn-hero-video { background:rgba(255,255,255,.06); color:var(--text); border:1px solid rgba(201,168,76,.35); }
+        .btn-hero-video:hover { background:rgba(201,168,76,.12); border-color:var(--gold); color:var(--gold); transform:translateY(-2px); }
+        .play-ring { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:var(--gold); color:#1a1a1a; font-size:11px; }
+        /* Promo video modal */
+        .pv-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:1000; padding:20px; }
+        .pv-overlay.open { display:flex; }
+        .pv-box { width:100%; max-width:900px; position:relative; }
+        .pv-frame { width:100%; aspect-ratio:16/9; border:none; border-radius:14px; background:#000; box-shadow:0 20px 80px rgba(0,0,0,.6); }
+        .pv-close { position:absolute; top:-44px; right:0; background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer; }
+        .pv-close:hover { background:rgba(255,255,255,.2); }
+        /* Soft hero glow for a more premium/marketing feel */
+        .hero::before { content:''; position:absolute; top:-10%; left:50%; transform:translateX(-50%); width:680px; height:680px; max-width:90vw; background:radial-gradient(circle, rgba(201,168,76,.16) 0%, rgba(201,168,76,0) 70%); pointer-events:none; z-index:0; }
+        .hero > * { position:relative; z-index:1; }
         .hero-stats { display:flex; gap:48px; margin-top:60px; justify-content:center; flex-wrap:wrap; }
         .hero-stat { text-align:center; }
         .hero-stat-num { font-size:32px; font-weight:800; color:var(--gold); }
@@ -171,6 +185,9 @@ LANDING_HTML = """<!DOCTYPE html>
         <a class="btn-hero btn-hero-primary" href="/register">
             🚀 <span id="heroCta1">Get Started Free</span>
         </a>
+        <button class="btn-hero btn-hero-video" id="heroVideoBtn" onclick="openPromoVideo()" style="display:none">
+            <span class="play-ring">▶</span> <span id="heroCtaVideo">Watch video</span>
+        </button>
         <a class="btn-hero btn-hero-secondary" href="/login">
             <span id="heroCta2">Sign In</span> →
         </a>
@@ -330,7 +347,7 @@ const I18N = {
         heroBadge:'AI-Powered Hotel Management',
         heroTitle1:'Smart Hotel', heroTitle2:'on Autopilot',
         heroSub:'24/7 AI assistant for your guests, staff management, analytics and more — all in one dashboard.',
-        heroCta1:'Get Started Free', heroCta2:'Sign In',
+        heroCta1:'Get Started Free', heroCta2:'Sign In', heroCtaVideo:'Watch video',
         statAi:'AI Assistant', statLang:'Languages', statFree:'Days Free Trial',
         featLabel:'Features', featTitle:'Everything your hotel needs',
         featSub:'From guest AI chat to staff management — one platform, zero complexity.',
@@ -357,7 +374,7 @@ const I18N = {
         heroBadge:'AI-управление отелем',
         heroTitle1:'Умный отель', heroTitle2:'на автопилоте',
         heroSub:'AI-ассистент для гостей 24/7, управление персоналом, аналитика и многое другое — в одном дашборде.',
-        heroCta1:'Начать бесплатно', heroCta2:'Войти',
+        heroCta1:'Начать бесплатно', heroCta2:'Войти', heroCtaVideo:'Смотреть видео',
         statAi:'AI-ассистент', statLang:'Языка', statFree:'Дней бесплатно',
         featLabel:'Возможности', featTitle:'Всё для вашего отеля',
         featSub:'От AI-чата до управления персоналом — одна платформа, без сложностей.',
@@ -384,7 +401,7 @@ const I18N = {
         heroBadge:'AI Destekli Otel Yönetimi',
         heroTitle1:'Akıllı Otel', heroTitle2:'Otomatik Pilot',
         heroSub:'Misafirleriniz için 7/24 AI asistanı, personel yönetimi, analitik ve daha fazlası — hepsi tek panelde.',
-        heroCta1:'Ücretsiz Başla', heroCta2:'Giriş Yap',
+        heroCta1:'Ücretsiz Başla', heroCta2:'Giriş Yap', heroCtaVideo:'Videoyu izle',
         statAi:'AI Asistanı', statLang:'Dil', statFree:'Gün Ücretsiz Deneme',
         featLabel:'Özellikler', featTitle:'Otelinizin ihtiyacı olan her şey',
         featSub:'Misafir AI sohbetinden personel yönetimine — tek platform, sıfır karmaşıklık.',
@@ -411,7 +428,7 @@ const I18N = {
         heroBadge:"AI-Asosida Mehmonxona Boshqaruvi",
         heroTitle1:'Aqlli Mehmonxona', heroTitle2:'Avtopilatda',
         heroSub:"Mehmonlaringiz uchun 24/7 AI yordamchi, xodimlarni boshqarish, analitika va boshqalar — bitta panelda.",
-        heroCta1:'Bepul Boshlash', heroCta2:'Kirish',
+        heroCta1:'Bepul Boshlash', heroCta2:'Kirish', heroCtaVideo:'Videoni ko‘rish',
         statAi:'AI Yordamchi', statLang:'Tillar', statFree:'Kun Bepul Sinov',
         featLabel:'Imkoniyatlar', featTitle:"Mehmonxonangizga kerak bo'lgan hamma narsa",
         featSub:"Mehmon AI chatidan xodimlarni boshqarishga qadar — bitta platforma, hech qanday murakkablik yo'q.",
@@ -441,7 +458,7 @@ if (!I18N[currentLang]) currentLang = 'en';
 // IDs to translate (id → i18n key, same name)
 const TRANS_IDS = [
     'navLoginBtn','navRegisterBtn','heroBadge','heroTitle1','heroTitle2','heroSub',
-    'heroCta1','heroCta2','statAi','statLang','statFree',
+    'heroCta1','heroCta2','heroCtaVideo','statAi','statLang','statFree',
     'featLabel','featTitle','featSub',
     'f1Title','f1Desc','f2Title','f2Desc','f3Title','f3Desc',
     'f4Title','f4Desc','f5Title','f5Desc','f6Title','f6Desc',
@@ -508,7 +525,48 @@ document.addEventListener('click', function(e) {
 });
 
 applyLang();
+
+// ===== PROMO VIDEO =====
+let _promoUrl = '';
+function _toEmbed(url) {
+    // YouTube watch / youtu.be / shorts → embed URL; else return null (use <video>)
+    let m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+    if (m) return 'https://www.youtube.com/embed/' + m[1] + '?autoplay=1&rel=0';
+    if (url.includes('vimeo.com/')) {
+        const id = url.split('vimeo.com/')[1].split(/[?#/]/)[0];
+        if (id) return 'https://player.vimeo.com/video/' + id + '?autoplay=1';
+    }
+    return null;
+}
+function openPromoVideo() {
+    if (!_promoUrl) return;
+    const box = document.getElementById('pvBox');
+    const embed = _toEmbed(_promoUrl);
+    if (embed) {
+        box.innerHTML = '<iframe class="pv-frame" src="' + embed + '" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>';
+    } else {
+        box.innerHTML = '<video class="pv-frame" src="' + _promoUrl + '" controls autoplay playsinline></video>';
+    }
+    box.insertAdjacentHTML('beforeend', '<button class="pv-close" onclick="closePromoVideo()">✕</button>');
+    document.getElementById('pvOverlay').classList.add('open');
+}
+function closePromoVideo() {
+    document.getElementById('pvOverlay').classList.remove('open');
+    document.getElementById('pvBox').innerHTML = '';  // stop playback
+}
+fetch('/api/landing-config').then(r => r.json()).then(d => {
+    if (d && d.promo_video) {
+        _promoUrl = d.promo_video;
+        const btn = document.getElementById('heroVideoBtn');
+        if (btn) btn.style.display = 'inline-flex';
+    }
+}).catch(() => {});
 </script>
+
+<!-- PROMO VIDEO MODAL -->
+<div class="pv-overlay" id="pvOverlay" onclick="if(event.target===this)closePromoVideo()">
+    <div class="pv-box" id="pvBox"></div>
+</div>
 </body>
 </html>
 """
