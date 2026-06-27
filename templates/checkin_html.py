@@ -1,4 +1,6 @@
 def get_checkin_html(hotel_name="SmartStay", default_lang="en"):
+    import html as _html
+    hotel_name = _html.escape(hotel_name or "SmartStay")  # hotel-controlled → escape
     return f"""<!DOCTYPE html>
 <html>
 <head>
@@ -217,7 +219,7 @@ def get_checkin_html(hotel_name="SmartStay", default_lang="en"):
     </div>
 
     <script>
-        const PAGE_LANG = '{default_lang}';
+        const HOTEL_LANG = '{default_lang}';
         const CHECKIN_I18N = {{
           en: {{
             ciSub:'Digital Check-in', lbl1:'Personal Info', lbl2:'Stay Details',
@@ -296,7 +298,18 @@ def get_checkin_html(hotel_name="SmartStay", default_lang="en"):
             errServer:"Xato yuz berdi", errNet:"Ulanish xatosi, qayta urining",
           }},
         }};
-        function _L() {{ return CHECKIN_I18N[PAGE_LANG] || CHECKIN_I18N.en; }}
+        // UI language: saved guest choice → hotel setting → browser language → English.
+        function _pickLang() {{
+          let saved = null;
+          try {{ saved = localStorage.getItem('ss_lang'); }} catch(e) {{}}
+          if (saved && CHECKIN_I18N[saved]) return saved;
+          if (CHECKIN_I18N[HOTEL_LANG]) return HOTEL_LANG;
+          const nav = (navigator.language || 'en').slice(0, 2);
+          if (CHECKIN_I18N[nav]) return nav;
+          return 'en';
+        }}
+        const CUR_LANG = _pickLang();
+        function _L() {{ return CHECKIN_I18N[CUR_LANG] || CHECKIN_I18N.en; }}
         function applyCheckinLang() {{
           const L = _L();
           ['ciSub','lbl1','lbl2','ciSecLabel1','ciLblFirst','ciLblLast',

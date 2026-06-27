@@ -1,14 +1,26 @@
 def get_public_page_html(hotel: dict, avg_rating: float, rating_count: int, recent_reviews: list) -> str:
-    name            = hotel.get("name", "")
-    slug            = hotel.get("slug", "")
-    photo_url       = hotel.get("photo_url", "")
-    page_desc       = hotel.get("page_description", "") or hotel.get("info", "")
-    amenities_raw   = hotel.get("amenities", "")
-    ai_name         = hotel.get("ai_name", "AI Asistan")
-    booking_url     = hotel.get("booking_url", "")
+    import html
+    from urllib.parse import quote as _urlquote
 
-    # Parse amenities
-    amenities = [a.strip() for a in amenities_raw.split(",") if a.strip()] if amenities_raw else []
+    def _safe_url(u: str) -> str:
+        """Only allow http(s) URLs; return '' otherwise. Quote-escape for embedding."""
+        u = (u or "").strip()
+        if not (u.startswith("http://") or u.startswith("https://")):
+            return ""
+        # Drop chars that could break out of an HTML attribute or CSS url()
+        return u.replace('"', "%22").replace("'", "%27").replace("(", "%28").replace(")", "%29").replace(" ", "%20")
+
+    # All of these are hotel-controlled and rendered into HTML — escape them.
+    name            = html.escape(hotel.get("name", ""))
+    slug            = hotel.get("slug", "")
+    photo_url       = _safe_url(hotel.get("photo_url", ""))
+    page_desc       = html.escape(hotel.get("page_description", "") or hotel.get("info", ""))
+    amenities_raw   = hotel.get("amenities", "")
+    ai_name         = html.escape(hotel.get("ai_name", "AI Asistan"))
+    booking_url     = _safe_url(hotel.get("booking_url", ""))
+
+    # Parse amenities (escape each pill)
+    amenities = [html.escape(a.strip()) for a in amenities_raw.split(",") if a.strip()] if amenities_raw else []
 
     # Rating stars HTML
     def stars_html(r):
@@ -40,7 +52,15 @@ def get_public_page_html(hotel: dict, avg_rating: float, rating_count: int, rece
         hero_overlay = ""
 
     rating_display = f"{avg_rating:.1f}" if avg_rating else "—"
-    booking_btn = f'<a href="{booking_url}" class="btn-booking" target="_blank" rel="noopener">📅 Бронировать</a>' if booking_url else ""
+
+    # Server-side default UI language: the hotel's setting if we have strings for it,
+    # otherwise English. The client-side switcher (below) can override per visitor.
+    _hotel_lang = (hotel.get("default_language") or "auto")
+    srv_lang = _hotel_lang if _hotel_lang in ("en", "ru", "tr", "uz") else "en"
+    booking_btn = (
+        f'<a href="{booking_url}" id="bookingBtn" class="btn-booking" target="_blank" rel="noopener">📅 Бронировать</a>'
+        if booking_url else ""
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="ru">
@@ -139,7 +159,7 @@ def get_public_page_html(hotel: dict, avg_rating: float, rating_count: int, rece
     <div class="rating-row">
       <span class="stars">{stars_html(avg_rating or 0)}</span>
       <span class="rating-num">{rating_display}</span>
-      <span class="rating-cnt">({rating_count} отзывов)</span>
+      <span class="rating-cnt"><span id="ratingCount">{rating_count}</span> <span id="reviewsWord">отзывов</span></span>
     </div>
   </div>
 </div>
@@ -148,7 +168,7 @@ def get_public_page_html(hotel: dict, avg_rating: float, rating_count: int, rece
 
   <!-- CTA BUTTONS -->
   <div class="actions" style="margin-top:24px">
-    <a href="/hotel/{slug}" class="btn-chat">💬 Открыть чат с консьержем</a>
+    <a href="/hotel/{slug}" id="chatBtn" class="btn-chat">💬 Открыть чат с консьержем</a>
     {booking_btn}
   </div>
 
@@ -157,20 +177,20 @@ def get_public_page_html(hotel: dict, avg_rating: float, rating_count: int, rece
     <div class="ai-widget">
       <div class="ai-icon">🤖</div>
       <div class="ai-text">
-        <h3>{ai_name} — ваш AI-консьерж</h3>
-        <p>Доступен 24/7 на вашем языке. Отвечает на вопросы, принимает заявки и помогает с любыми запросами.</p>
+        <h3>{ai_name} — <span id="aiConcierge">ваш AI-консьерж</span></h3>
+        <p id="aiDesc">Доступен 24/7 на вашем языке. Отвечает на вопросы, принимает заявки и помогает с любыми запросами.</p>
       </div>
     </div>
   </div>
 
-  {"<!-- DESCRIPTION --><div class='section'><div class='section-title'>Об отеле</div><div class='description'>" + page_desc + "</div></div>" if page_desc else ""}
+  {"<!-- DESCRIPTION --><div class='section'><div class='section-title' id='descTitle'>Об отеле</div><div class='description'>" + page_desc + "</div></div>" if page_desc else ""}
 
-  {"<!-- AMENITIES --><div class='section'><div class='section-title'>Удобства</div><div class='pills'>" + amenity_pills + "</div></div>" if amenities else ""}
+  {"<!-- AMENITIES --><div class='section'><div class='section-title' id='amenTitle'>Удобства</div><div class='pills'>" + amenity_pills + "</div></div>" if amenities else ""}
 
   <!-- REVIEWS -->
   <div class="section">
-    <div class="section-title">Отзывы гостей</div>
-    {"<div class='reviews-grid'>" + reviews_html + "</div>" if recent_reviews else "<div class='no-reviews'>Отзывов пока нет — будьте первым! ⭐</div>"}
+    <div class="section-title" id="reviewsTitle">Отзывы гостей</div>
+    {"<div class='reviews-grid'>" + reviews_html + "</div>" if recent_reviews else "<div class='no-reviews' id='noReviews'>Отзывов пока нет — будьте первым! ⭐</div>"}
   </div>
 
 </div>
@@ -178,6 +198,68 @@ def get_public_page_html(hotel: dict, avg_rating: float, rating_count: int, rece
 <footer>
   Powered by <a href="https://smartstay.ai" target="_blank">SmartStay AI</a>
 </footer>
+
+<select id="pubLang" onchange="setPubLang(this.value)"
+  style="position:fixed;top:14px;right:14px;z-index:10;background:rgba(0,0,0,0.45);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:5px 8px;font-size:13px;outline:none;cursor:pointer">
+  <option value="en">🇬🇧 EN</option>
+  <option value="ru">🇷🇺 RU</option>
+  <option value="tr">🇹🇷 TR</option>
+  <option value="uz">🇺🇿 UZ</option>
+</select>
+
+<script>
+  var PUB_I18N = {{
+    en: {{ chat:'💬 Open concierge chat', booking:'📅 Book', concierge:'your AI concierge',
+           aiDesc:'Available 24/7 in your language. Answers questions, takes requests and helps with anything.',
+           descTitle:'About the hotel', amenTitle:'Amenities', reviewsTitle:'Guest reviews',
+           noReviews:'No reviews yet — be the first! ⭐', reviewsWord:'reviews' }},
+    ru: {{ chat:'💬 Открыть чат с консьержем', booking:'📅 Бронировать', concierge:'ваш AI-консьерж',
+           aiDesc:'Доступен 24/7 на вашем языке. Отвечает на вопросы, принимает заявки и помогает с любыми запросами.',
+           descTitle:'Об отеле', amenTitle:'Удобства', reviewsTitle:'Отзывы гостей',
+           noReviews:'Отзывов пока нет — будьте первым! ⭐', reviewsWord:'отзывов' }},
+    tr: {{ chat:'💬 Konsiyerj sohbetini aç', booking:'📅 Rezervasyon', concierge:'AI konsiyerjiniz',
+           aiDesc:'Dilinizde 7/24 hizmette. Soruları yanıtlar, talepleri alır ve her konuda yardımcı olur.',
+           descTitle:'Otel hakkında', amenTitle:'Olanaklar', reviewsTitle:'Misafir yorumları',
+           noReviews:'Henüz yorum yok — ilk siz olun! ⭐', reviewsWord:'yorum' }},
+    uz: {{ chat:'💬 Konsyerj chatini ochish', booking:'📅 Bron qilish', concierge:'AI konsyerjingiz',
+           aiDesc:'24/7 sizning tilingizda. Savollarga javob beradi, buyurtmalarni qabul qiladi va har qanday so‘rovda yordam beradi.',
+           descTitle:'Mehmonxona haqida', amenTitle:'Qulayliklar', reviewsTitle:'Mehmon sharhlari',
+           noReviews:'Hozircha sharh yo‘q — birinchi bo‘ling! ⭐', reviewsWord:'sharh' }}
+  }};
+
+  function _applyPub(lang) {{
+    var T = PUB_I18N[lang] || PUB_I18N.en;
+    var setTxt = function(id, v) {{ var e = document.getElementById(id); if (e) e.textContent = v; }};
+    setTxt('chatBtn', T.chat);
+    setTxt('bookingBtn', T.booking);
+    setTxt('aiConcierge', T.concierge);
+    setTxt('aiDesc', T.aiDesc);
+    setTxt('descTitle', T.descTitle);
+    setTxt('amenTitle', T.amenTitle);
+    setTxt('reviewsTitle', T.reviewsTitle);
+    setTxt('noReviews', T.noReviews);
+    setTxt('reviewsWord', T.reviewsWord);
+    var sel = document.getElementById('pubLang');
+    if (sel) sel.value = lang;
+    document.documentElement.lang = lang;
+  }}
+
+  function setPubLang(lang) {{
+    if (!PUB_I18N[lang]) return;
+    try {{ localStorage.setItem('ss_lang', lang); }} catch(e) {{}}
+    _applyPub(lang);
+  }}
+
+  // Pick: saved choice → hotel setting → browser language → English.
+  (function() {{
+    var saved = null;
+    try {{ saved = localStorage.getItem('ss_lang'); }} catch(e) {{}}
+    var nav = (navigator.language || 'en').slice(0, 2);
+    var lang = (saved && PUB_I18N[saved]) ? saved
+             : (PUB_I18N['{srv_lang}'] ? '{srv_lang}' : (PUB_I18N[nav] ? nav : 'en'));
+    _applyPub(lang);
+  }})();
+</script>
 
 </body>
 </html>"""

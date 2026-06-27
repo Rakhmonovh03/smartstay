@@ -24,6 +24,7 @@ ADMIN_HTML = """
         }
         .nav-item:hover { background:rgba(255,255,255,0.04); color:#fff; }
         .nav-item.active { background:rgba(201,168,76,0.1); color:#C9A84C; border-right:2px solid #C9A84C; }
+        .lang-btn-adm.active { background:#C9A84C !important; color:#000 !important; border-color:#C9A84C !important; }
 
         .main { margin-left:240px; padding:32px; }
         .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:32px; }
@@ -131,12 +132,18 @@ ADMIN_HTML = """
             <h2>🔐 Super Admin</h2>
             <p>SmartStay AI — 2026</p>
         </div>
-        <a class="nav-item active" onclick="showTab('hotels')" id="tab-hotels"><span>🏨</span> Tüm Oteller</a>
-        <a class="nav-item" onclick="showTab('owners')" id="tab-owners"><span>👥</span> Владельцы</a>
-        <a class="nav-item" href="/register"><span>➕</span> Yeni Otel Ekle</a>
+        <a class="nav-item active" onclick="showTab('hotels')" id="tab-hotels" data-i18n="navHotels"><span>🏨</span> All Hotels</a>
+        <a class="nav-item" onclick="showTab('owners')" id="tab-owners" data-i18n="navOwners"><span>👥</span> Owners</a>
+        <a class="nav-item" href="/register" data-i18n="navAddHotel"><span>➕</span> Add Hotel</a>
         <div style="position:absolute; bottom:24px; left:0; right:0; padding:0 16px;">
-            <a class="nav-item" href="/admin/logout" style="border-radius:8px; color:#E05555;">
-                <span>🚪</span> Çıkış
+            <div style="display:flex;gap:6px;margin-bottom:12px;padding:0 8px">
+                <button class="lang-btn-adm" data-lang="en" onclick="setAdminLang('en')" style="flex:1;background:#1a1a1a;border:1px solid #333;color:#ccc;border-radius:6px;padding:5px 0;font-size:11px;cursor:pointer">EN</button>
+                <button class="lang-btn-adm" data-lang="ru" onclick="setAdminLang('ru')" style="flex:1;background:#1a1a1a;border:1px solid #333;color:#ccc;border-radius:6px;padding:5px 0;font-size:11px;cursor:pointer">RU</button>
+                <button class="lang-btn-adm" data-lang="tr" onclick="setAdminLang('tr')" style="flex:1;background:#1a1a1a;border:1px solid #333;color:#ccc;border-radius:6px;padding:5px 0;font-size:11px;cursor:pointer">TR</button>
+                <button class="lang-btn-adm" data-lang="uz" onclick="setAdminLang('uz')" style="flex:1;background:#1a1a1a;border:1px solid #333;color:#ccc;border-radius:6px;padding:5px 0;font-size:11px;cursor:pointer">UZ</button>
+            </div>
+            <a class="nav-item" href="/admin/logout" style="border-radius:8px; color:#E05555;" data-i18n="navLogout">
+                <span>🚪</span> Logout
             </a>
         </div>
     </div>
@@ -145,11 +152,11 @@ ADMIN_HTML = """
     <div class="modal-overlay" id="deleteModal">
         <div class="modal">
             <div class="modal-icon">🗑️</div>
-            <h3>Oteli Sil</h3>
+            <h3 data-i18n="modalDeleteTitle">Oteli Sil</h3>
             <p id="modalText">Bu oteli silmek istediğinizden emin misiniz?<br>Tüm mesajlar da silinecek!</p>
             <div class="modal-btns">
-                <button class="modal-btn modal-btn-cancel" onclick="closeModal()">İptal</button>
-                <button class="modal-btn modal-btn-delete" id="confirmDelete">Evet, Sil</button>
+                <button class="modal-btn modal-btn-cancel" onclick="closeModal()" data-i18n="modalCancel">İptal</button>
+                <button class="modal-btn modal-btn-delete" id="confirmDelete" data-i18n="modalDelete">Evet, Sil</button>
             </div>
         </div>
     </div>
@@ -157,25 +164,25 @@ ADMIN_HTML = """
     <div id="section-hotels" class="main">
         <div class="page-header">
             <div>
-                <div class="page-title">Tüm Oteller</div>
-                <div class="page-sub"><span class="live-dot"></span>Canlı — Her 30 saniyede güncellenir</div>
+                <div class="page-title" data-i18n="hotelsTitle">Tüm Oteller</div>
+                <div class="page-sub"><span class="live-dot"></span><span data-i18n="hotelsSub">Canlı — Her 30 saniyede güncellenir</span></div>
             </div>
             <div style="display:flex; gap:10px;">
-                <button class="btn btn-dark" onclick="location.reload()">🔄 Yenile</button>
-                <button class="btn btn-gold" onclick="window.location.href='/register'">➕ Yeni Otel</button>
+                <button class="btn btn-dark" onclick="location.reload()" data-i18n="btnRefresh">🔄 Yenile</button>
+                <button class="btn btn-gold" onclick="window.location.href='/register'" data-i18n="btnNewHotel">➕ Yeni Otel</button>
             </div>
         </div>
 
         <div class="revenue-card">
             <div>
-                <h3>💰 Aylık Tahmini Gelir</h3>
+                <h3 data-i18n="revMonthly">💰 Aylık Tahmini Gelir</h3>
                 <div class="revenue-num" id="revenueNum">$0</div>
-                <div class="revenue-sub">Aktif oteller × $800/ay</div>
+                <div class="revenue-sub" data-i18n="revMonthlySub">Aktif oteller × $800/ay</div>
             </div>
             <div style="text-align:right">
-                <h3>📈 Yıllık Projeksiyon</h3>
+                <h3 data-i18n="revYearly">📈 Yıllık Projeksiyon</h3>
                 <div class="revenue-num" id="yearlyRevenue" style="color:#4CAF50">$0</div>
-                <div class="revenue-sub">Mevcut büyüme ile</div>
+                <div class="revenue-sub" data-i18n="revYearlySub">Mevcut büyüme ile</div>
             </div>
         </div>
 
@@ -183,22 +190,22 @@ ADMIN_HTML = """
             <div class="stat">
                 <div class="stat-icon">🏨</div>
                 <div class="stat-num" id="totalHotels">—</div>
-                <div class="stat-label">Toplam Otel</div>
+                <div class="stat-label" data-i18n="statHotels">Toplam Otel</div>
             </div>
             <div class="stat green">
                 <div class="stat-icon">💬</div>
                 <div class="stat-num" id="totalMessages">—</div>
-                <div class="stat-label">Toplam Mesaj</div>
+                <div class="stat-label" data-i18n="statMessages">Toplam Mesaj</div>
             </div>
             <div class="stat blue">
                 <div class="stat-icon">🛎️</div>
                 <div class="stat-num" id="totalGuests">—</div>
-                <div class="stat-label">Toplam Misafir</div>
+                <div class="stat-label" data-i18n="statGuests">Toplam Misafir</div>
             </div>
             <div class="stat purple">
                 <div class="stat-icon">🚀</div>
                 <div class="stat-num" id="activeHotels">—</div>
-                <div class="stat-label">Aktif Otel</div>
+                <div class="stat-label" data-i18n="statActive">Aktif Otel</div>
             </div>
         </div>
 
@@ -207,14 +214,14 @@ ADMIN_HTML = """
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>Otel</th>
-                        <th>Plan</th>
-                        <th>Mesajlar</th>
-                        <th>Misafirler</th>
-                        <th>Puan</th>
-                        <th>Telegram</th>
-                        <th>Kayıt</th>
-                        <th>İşlemler</th>
+                        <th data-i18n="thHotel">Otel</th>
+                        <th data-i18n="thPlan">Plan</th>
+                        <th data-i18n="thMessages">Mesajlar</th>
+                        <th data-i18n="thGuests">Misafirler</th>
+                        <th data-i18n="thRating">Puan</th>
+                        <th data-i18n="thTelegram">Telegram</th>
+                        <th data-i18n="thRegistered">Kayıt</th>
+                        <th data-i18n="thActions">İşlemler</th>
                     </tr>
                 </thead>
                 <tbody id="tbody"></tbody>
@@ -229,6 +236,110 @@ ADMIN_HTML = """
             return d.innerHTML;
         }
 
+        // ===== I18N =====
+        const ADMIN_I18N = {
+            en: {
+                navHotels:'🏨 All Hotels', navOwners:'👥 Owners', navAddHotel:'➕ Add Hotel', navLogout:'🚪 Logout',
+                hotelsTitle:'All Hotels', hotelsSub:'Live — updates every 30s',
+                btnRefresh:'🔄 Refresh', btnNewHotel:'➕ New Hotel',
+                revMonthly:'💰 Monthly est. revenue', revMonthlySub:'Active hotels × $800/mo',
+                revYearly:'📈 Yearly projection', revYearlySub:'At current growth',
+                statHotels:'Total Hotels', statMessages:'Total Messages', statGuests:'Total Guests', statActive:'Active Hotels',
+                thHotel:'Hotel', thPlan:'Plan', thMessages:'Messages', thGuests:'Guests', thRating:'Rating',
+                thTelegram:'Telegram', thRegistered:'Registered', thActions:'Actions',
+                modalDeleteTitle:'Delete Hotel', modalCancel:'Cancel', modalDelete:'Yes, Delete',
+                ownersTitle:'👥 Network Owners', ownersSub:'Accounts with access to multiple hotels',
+                createOwnerTitle:'➕ Create new owner', phName:'Name', phEmail:'Email', phPass:'Password',
+                btnCreate:'Create', ownersTotal:'Total owners:',
+                ownersHint:'💡 Owner logs in at /owner/login and sees only their hotels. The 🔓 button enters a dashboard without a password (for you as Super Admin).',
+                connected:'✓ Connected', none:'— None', noOwners:'No owners yet', selectHotel:'— Hotel to assign —',
+                assign:'Assign', fillFields:'Fill in all fields', selectHotelErr:'Select a hotel',
+                ownerCreated:'✅ Owner created!', hotelLinked:'✅ Hotel linked!', err:'Error',
+                deleteConfirm:'Delete hotel {n}?', deleteWarn:'All messages will also be deleted!',
+            },
+            ru: {
+                navHotels:'🏨 Все отели', navOwners:'👥 Владельцы', navAddHotel:'➕ Добавить отель', navLogout:'🚪 Выход',
+                hotelsTitle:'Все отели', hotelsSub:'Онлайн — обновление каждые 30 сек',
+                btnRefresh:'🔄 Обновить', btnNewHotel:'➕ Новый отель',
+                revMonthly:'💰 Доход в месяц (оценка)', revMonthlySub:'Активные отели × $800/мес',
+                revYearly:'📈 Годовой прогноз', revYearlySub:'При текущем росте',
+                statHotels:'Всего отелей', statMessages:'Всего сообщений', statGuests:'Всего гостей', statActive:'Активных отелей',
+                thHotel:'Отель', thPlan:'Тариф', thMessages:'Сообщения', thGuests:'Гости', thRating:'Оценка',
+                thTelegram:'Telegram', thRegistered:'Регистрация', thActions:'Действия',
+                modalDeleteTitle:'Удалить отель', modalCancel:'Отмена', modalDelete:'Да, удалить',
+                ownersTitle:'👥 Владельцы сети', ownersSub:'Аккаунты с доступом к нескольким отелям',
+                createOwnerTitle:'➕ Создать владельца', phName:'Имя', phEmail:'Email', phPass:'Пароль',
+                btnCreate:'Создать', ownersTotal:'Всего владельцев:',
+                ownersHint:'💡 Владелец заходит на /owner/login и видит только свои отели. Кнопка 🔓 входит в дашборд без пароля (для вас как Super Admin).',
+                connected:'✓ Подключён', none:'— Нет', noOwners:'Владельцев нет', selectHotel:'— Отель для привязки —',
+                assign:'Привязать', fillFields:'Заполните все поля', selectHotelErr:'Выберите отель',
+                ownerCreated:'✅ Владелец создан!', hotelLinked:'✅ Отель привязан!', err:'Ошибка',
+                deleteConfirm:'Удалить отель {n}?', deleteWarn:'Все сообщения тоже будут удалены!',
+            },
+            tr: {
+                navHotels:'🏨 Tüm Oteller', navOwners:'👥 Sahipler', navAddHotel:'➕ Otel Ekle', navLogout:'🚪 Çıkış',
+                hotelsTitle:'Tüm Oteller', hotelsSub:'Canlı — Her 30 saniyede güncellenir',
+                btnRefresh:'🔄 Yenile', btnNewHotel:'➕ Yeni Otel',
+                revMonthly:'💰 Aylık Tahmini Gelir', revMonthlySub:'Aktif oteller × $800/ay',
+                revYearly:'📈 Yıllık Projeksiyon', revYearlySub:'Mevcut büyüme ile',
+                statHotels:'Toplam Otel', statMessages:'Toplam Mesaj', statGuests:'Toplam Misafir', statActive:'Aktif Otel',
+                thHotel:'Otel', thPlan:'Plan', thMessages:'Mesajlar', thGuests:'Misafirler', thRating:'Puan',
+                thTelegram:'Telegram', thRegistered:'Kayıt', thActions:'İşlemler',
+                modalDeleteTitle:'Oteli Sil', modalCancel:'İptal', modalDelete:'Evet, Sil',
+                ownersTitle:'👥 Ağ Sahipleri', ownersSub:'Birden fazla otele erişimi olan hesaplar',
+                createOwnerTitle:'➕ Yeni sahip oluştur', phName:'Ad', phEmail:'Email', phPass:'Şifre',
+                btnCreate:'Oluştur', ownersTotal:'Toplam sahip:',
+                ownersHint:'💡 Sahip /owner/login adresinden girer ve yalnızca kendi otellerini görür. 🔓 düğmesi şifresiz panele girer (Super Admin için).',
+                connected:'✓ Bağlı', none:'— Yok', noOwners:'Henüz sahip yok', selectHotel:'— Bağlanacak otel —',
+                assign:'Bağla', fillFields:'Tüm alanları doldurun', selectHotelErr:'Bir otel seçin',
+                ownerCreated:'✅ Sahip oluşturuldu!', hotelLinked:'✅ Otel bağlandı!', err:'Hata',
+                deleteConfirm:'{n} otelini silmek istediğinizden emin misiniz?', deleteWarn:'Tüm mesajlar da silinecek!',
+            },
+            uz: {
+                navHotels:'🏨 Barcha mehmonxonalar', navOwners:'👥 Egalar', navAddHotel:'➕ Mehmonxona qo‘shish', navLogout:'🚪 Chiqish',
+                hotelsTitle:'Barcha mehmonxonalar', hotelsSub:'Jonli — har 30 soniyada yangilanadi',
+                btnRefresh:'🔄 Yangilash', btnNewHotel:'➕ Yangi mehmonxona',
+                revMonthly:'💰 Oylik taxminiy daromad', revMonthlySub:'Faol mehmonxonalar × $800/oy',
+                revYearly:'📈 Yillik prognoz', revYearlySub:'Hozirgi o‘sish bilan',
+                statHotels:'Jami mehmonxona', statMessages:'Jami xabar', statGuests:'Jami mehmon', statActive:'Faol mehmonxona',
+                thHotel:'Mehmonxona', thPlan:'Tarif', thMessages:'Xabarlar', thGuests:'Mehmonlar', thRating:'Baho',
+                thTelegram:'Telegram', thRegistered:'Ro‘yxat', thActions:'Amallar',
+                modalDeleteTitle:'Mehmonxonani o‘chirish', modalCancel:'Bekor qilish', modalDelete:'Ha, o‘chirish',
+                ownersTitle:'👥 Tarmoq egalari', ownersSub:'Bir nechta mehmonxonaga kira oladigan hisoblar',
+                createOwnerTitle:'➕ Yangi ega yaratish', phName:'Ism', phEmail:'Email', phPass:'Parol',
+                btnCreate:'Yaratish', ownersTotal:'Jami egalar:',
+                ownersHint:'💡 Ega /owner/login orqali kiradi va faqat o‘z mehmonxonalarini ko‘radi. 🔓 tugmasi parolsiz panelga kiritadi (Super Admin uchun).',
+                connected:'✓ Ulangan', none:'— Yo‘q', noOwners:'Hozircha ega yo‘q', selectHotel:'— Bog‘lash uchun mehmonxona —',
+                assign:'Bog‘lash', fillFields:'Barcha maydonlarni to‘ldiring', selectHotelErr:'Mehmonxonani tanlang',
+                ownerCreated:'✅ Ega yaratildi!', hotelLinked:'✅ Mehmonxona bog‘landi!', err:'Xato',
+                deleteConfirm:'{n} mehmonxonasini o‘chirasizmi?', deleteWarn:'Barcha xabarlar ham o‘chiriladi!',
+            },
+        };
+        let _adminLang = localStorage.getItem('ss_lang');
+        if (!ADMIN_I18N[_adminLang]) _adminLang = 'en';
+        function T(key) { return (ADMIN_I18N[_adminLang] || ADMIN_I18N.en)[key] || key; }
+        function applyAdminLang() {
+            const L = ADMIN_I18N[_adminLang] || ADMIN_I18N.en;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const k = el.getAttribute('data-i18n');
+                if (L[k]) el.textContent = L[k];
+            });
+            document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+                const k = el.getAttribute('data-i18n-ph');
+                if (L[k]) el.placeholder = L[k];
+            });
+            document.querySelectorAll('.lang-btn-adm').forEach(b => {
+                b.classList.toggle('active', b.dataset.lang === _adminLang);
+            });
+        }
+        function setAdminLang(l) {
+            if (!ADMIN_I18N[l]) return;
+            localStorage.setItem('ss_lang', l);
+            location.reload();  // simplest reliable way to re-render everything
+        }
+        document.addEventListener('DOMContentLoaded', applyAdminLang);
+
+        function loadHotels() {
         fetch('/api/admin/hotels', {credentials:'include'})
             .then(r => r.json())
             .then(data => {
@@ -282,8 +393,8 @@ ADMIN_HTML = """
                         </td>
                         <td>
                             ${h.telegram_token
-                                ? '<span class="badge badge-active">✓ Bağlı</span>'
-                                : '<span style="color:#555;font-size:12px">— Yok</span>'}
+                                ? '<span class="badge badge-active">' + T('connected') + '</span>'
+                                : '<span style="color:#555;font-size:12px">' + T('none') + '</span>'}
                         </td>
                         <td style="color:#555;font-size:12px">${esc(h.created_at)}</td>
                         <td>
@@ -299,6 +410,8 @@ ADMIN_HTML = """
                     </tr>`;
                 }).join('');
             });
+        }
+        loadHotels();
 
         async function changePlan(slug, selectEl) {
             const plan = selectEl.value;
@@ -345,9 +458,9 @@ ADMIN_HTML = """
 
         function deleteHotel(slug, name) {
             pendingDeleteSlug = slug;
-            document.getElementById('modalText').innerHTML = 
-                `<b style="color:white">${name}</b> otelini silmek istediğinizden emin misiniz?<br><br>
-                <span style="color:#E05555">⚠️ Tüm mesajlar da silinecek!</span>`;
+            document.getElementById('modalText').innerHTML =
+                T('deleteConfirm').replace('{n}', '<b style="color:white">' + esc(name) + '</b>') +
+                '<br><br><span style="color:#E05555">⚠️ ' + T('deleteWarn') + '</span>';
             document.getElementById('deleteModal').classList.add('active');
         }
 
@@ -413,7 +526,7 @@ ADMIN_HTML = """
 
             const list = document.getElementById('owners-list');
             if (owners.length === 0) {
-                list.innerHTML = '<div style="color:#555;padding:20px;text-align:center">Нет владельцев</div>';
+                list.innerHTML = '<div style="color:#555;padding:20px;text-align:center">' + T('noOwners') + '</div>';
                 return;
             }
             list.innerHTML = owners.map(o => `
@@ -427,10 +540,10 @@ ADMIN_HTML = """
               </div>
               <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
                 <select id="sel-${o.id}" style="background:#111;border:1px solid #333;border-radius:6px;color:#eee;padding:6px 10px;font-size:13px">
-                  <option value="">— Отель для привязки —</option>
+                  <option value="">${T('selectHotel')}</option>
                   ${allSlugs.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}
                 </select>
-                <button onclick="assignHotel(${o.id})" style="padding:6px 14px;background:#C9A84C;color:#000;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">Привязать</button>
+                <button onclick="assignHotel(${o.id})" style="padding:6px 14px;background:#C9A84C;color:#000;border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">${T('assign')}</button>
               </div>
             </div>`).join('');
         }
@@ -438,30 +551,30 @@ ADMIN_HTML = """
         async function assignHotel(ownerId) {
             const sel = document.getElementById('sel-' + ownerId);
             const slug = sel.value;
-            if (!slug) { showToast('Выберите отель', 'red'); return; }
+            if (!slug) { showToast(T('selectHotelErr'), 'red'); return; }
             const r = await fetch('/api/admin/owners/' + ownerId + '/hotels', {
                 method: 'POST', credentials: 'include',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({hotel_slug: slug})
             });
             const d = await r.json();
-            if (d.ok) { showToast('✅ Отель привязан!', 'green'); }
-            else { showToast('❌ ' + (d.error || 'Ошибка'), 'red'); }
+            if (d.ok) { showToast(T('hotelLinked'), 'green'); }
+            else { showToast('❌ ' + (d.error || T('err')), 'red'); }
         }
 
         async function createOwner() {
             const name  = document.getElementById('new-owner-name').value.trim();
             const email = document.getElementById('new-owner-email').value.trim();
             const pass  = document.getElementById('new-owner-pass').value.trim();
-            if (!name || !email || !pass) { showToast('Заполните все поля', 'red'); return; }
+            if (!name || !email || !pass) { showToast(T('fillFields'), 'red'); return; }
             const r = await fetch('/api/admin/owners', {
                 method: 'POST', credentials: 'include',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({name, email, password: pass})
             });
             const d = await r.json();
-            if (d.ok) { showToast('✅ Владелец создан!', 'green'); loadOwners(); }
-            else { showToast('❌ ' + (d.error || 'Ошибка'), 'red'); }
+            if (d.ok) { showToast(T('ownerCreated'), 'green'); loadOwners(); }
+            else { showToast('❌ ' + (d.error || T('err')), 'red'); }
         }
 
         setInterval(() => {
@@ -473,28 +586,27 @@ ADMIN_HTML = """
     <div id="section-owners" style="display:none" class="main">
         <div class="page-header">
             <div>
-                <div class="page-title">👥 Владельцы сети</div>
-                <div class="page-sub">Аккаунты с доступом к нескольким отелям</div>
+                <div class="page-title" data-i18n="ownersTitle">👥 Network Owners</div>
+                <div class="page-sub" data-i18n="ownersSub">Accounts with access to multiple hotels</div>
             </div>
         </div>
 
         <!-- Create owner form -->
         <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:14px;padding:24px;margin-bottom:28px">
-            <div style="font-weight:700;font-size:15px;margin-bottom:16px">➕ Создать нового владельца</div>
+            <div style="font-weight:700;font-size:15px;margin-bottom:16px" data-i18n="createOwnerTitle">➕ Создать нового владельца</div>
             <div style="display:flex;gap:12px;flex-wrap:wrap">
-                <input id="new-owner-name" placeholder="Имя" style="flex:1;min-width:150px;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#eee;padding:10px 14px;font-size:14px">
-                <input id="new-owner-email" placeholder="Email" type="email" style="flex:2;min-width:200px;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#eee;padding:10px 14px;font-size:14px">
-                <input id="new-owner-pass" placeholder="Пароль" type="password" style="flex:1;min-width:150px;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#eee;padding:10px 14px;font-size:14px">
-                <button onclick="createOwner()" style="padding:10px 20px;background:#C9A84C;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">Создать</button>
+                <input id="new-owner-name" placeholder="Имя" data-i18n-ph="phName" style="flex:1;min-width:150px;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#eee;padding:10px 14px;font-size:14px">
+                <input id="new-owner-email" placeholder="Email" data-i18n-ph="phEmail" type="email" style="flex:2;min-width:200px;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#eee;padding:10px 14px;font-size:14px">
+                <input id="new-owner-pass" placeholder="Пароль" data-i18n-ph="phPass" type="password" style="flex:1;min-width:150px;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#eee;padding:10px 14px;font-size:14px">
+                <button onclick="createOwner()" data-i18n="btnCreate" style="padding:10px 20px;background:#C9A84C;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">Создать</button>
             </div>
         </div>
 
-        <div style="font-size:13px;color:#666;margin-bottom:16px">Всего владельцев: <b id="owners-count">—</b></div>
+        <div style="font-size:13px;color:#666;margin-bottom:16px"><span data-i18n="ownersTotal">Всего владельцев:</span> <b id="owners-count">—</b></div>
         <div id="owners-list"></div>
 
-        <div style="margin-top:20px;padding:16px;background:#111;border-radius:10px;font-size:13px;color:#555">
-            💡 Владелец заходит на <b style="color:#C9A84C">/owner/login</b> и видит только свои отели.
-            Кнопка 🔓 в таблице отелей входит в дашборд без пароля (для вас как Super Admin).
+        <div style="margin-top:20px;padding:16px;background:#111;border-radius:10px;font-size:13px;color:#555" data-i18n="ownersHint">
+            💡 Владелец заходит на /owner/login и видит только свои отели.
         </div>
     </div>
 </body>

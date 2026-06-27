@@ -580,9 +580,9 @@ DASHBOARD_HTML = """
                 <div class="page-sub"><span class="live-dot"></span><span id="liveStatus">Live • Updates every 3s</span></div>
             </div>
             <div class="header-btns">
-                <button class="btn btn-dark" onclick="markRead()">✅ Okundu</button>
+                <button class="btn btn-dark" data-i18n="btnMarkRead" onclick="markRead()">✅ Okundu</button>
                 <button class="btn btn-dark" onclick="exportExcel()">📥 Excel</button>
-                <button class="btn btn-gold" onclick="loadData()">🔄 Yenile</button>
+                <button class="btn btn-gold" data-i18n="btnRefresh" onclick="loadData()">🔄 Yenile</button>
             </div>
         </div>
 
@@ -710,10 +710,13 @@ DASHBOARD_HTML = """
                     <button class="btn btn-dark btn-sm" onclick="exportGuests()">📥 Excel</button>
                 </div>
             </div>
-            <div class="checkin-link-box" id="checkinLinkBox" style="display:none">
-                <div>
+            <div class="checkin-link-box" id="checkinLinkBox" style="display:none;align-items:center;gap:16px">
+                <img id="checkinQrImg" alt="Check-in QR" loading="lazy"
+                     style="width:120px;height:120px;border-radius:8px;background:#fff;padding:5px;flex-shrink:0">
+                <div style="flex:1">
                     <div style="font-size:11px;color:var(--text3);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Misafir Check-in Linki</div>
                     <div class="checkin-link-text" id="checkinLinkText"></div>
+                    <div style="font-size:11px;color:var(--text3);margin-top:6px">📱 Misafir bu QR'ı okutarak check-in yapabilir</div>
                 </div>
                 <button class="btn btn-gold btn-sm" onclick="copyCheckinLink()">📋 Kopyala</button>
             </div>
@@ -740,7 +743,7 @@ DASHBOARD_HTML = """
                     <span><span style="display:inline-block;width:12px;height:12px;background:rgba(60,180,100,0.3);border-radius:3px;vertical-align:middle;margin-right:4px"></span>Check-in</span>
                     <span><span style="display:inline-block;width:12px;height:12px;background:rgba(201,168,76,0.2);border-radius:3px;vertical-align:middle;margin-right:4px"></span>Dolu</span>
                     <span><span style="display:inline-block;width:12px;height:12px;background:rgba(220,80,80,0.2);border-radius:3px;vertical-align:middle;margin-right:4px"></span>Check-out</span>
-                    <button class="btn btn-outline btn-sm" onclick="loadCalendar()">↻ Yenile</button>
+                    <button class="btn btn-outline btn-sm" data-i18n="btnRefresh" onclick="loadCalendar()">↻ Yenile</button>
                 </div>
             </div>
             <div class="cal-wrap">
@@ -792,7 +795,7 @@ DASHBOARD_HTML = """
                         <option value="in_progress">🔄 İşlemde</option>
                         <option value="resolved">✅ Çözüldü</option>
                     </select>
-                    <button class="btn btn-outline btn-sm" onclick="loadRequests()">↻ Yenile</button>
+                    <button class="btn btn-outline btn-sm" data-i18n="btnRefresh" onclick="loadRequests()">↻ Yenile</button>
                 </div>
             </div>
             <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden">
@@ -991,7 +994,7 @@ DASHBOARD_HTML = """
                     <div class="page-sub" id="analyticsPageSub">Hotel performance summary</div>
                 </div>
                 <div class="header-btns">
-                    <button class="btn btn-gold btn-sm" onclick="loadAnalytics()">↻ Yenile</button>
+                    <button class="btn btn-gold btn-sm" data-i18n="btnRefresh" onclick="loadAnalytics()">↻ Yenile</button>
                 </div>
             </div>
 
@@ -1038,7 +1041,7 @@ DASHBOARD_HTML = """
                     <div class="page-sub" id="ratingsPageSub">Guest scores and comments</div>
                 </div>
                 <div class="header-btns">
-                    <button class="btn btn-gold btn-sm" onclick="loadRatings()">↻ Yenile</button>
+                    <button class="btn btn-gold btn-sm" data-i18n="btnRefresh" onclick="loadRatings()">↻ Yenile</button>
                 </div>
             </div>
             <div class="rating-avg-card" id="ratingAvgCard" style="display:none">
@@ -1068,6 +1071,20 @@ DASHBOARD_HTML = """
                 </div>
                 <div class="header-btns">
                     <button class="btn btn-gold btn-sm" onclick="window.print()" id="qrPrintBtn">🖨️ Print All</button>
+                </div>
+            </div>
+
+            <!-- Check-in QR + all room QR codes -->
+            <div class="chart-card" style="margin-bottom:20px;padding:20px">
+                <div class="chart-title" id="qrbCheckinTitle">✅ Self Check-in QR</div>
+                <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:12px">
+                    <img id="qrCheckinBuilderImg" src="" alt="Check-in QR"
+                         style="width:160px;height:160px;border-radius:8px;border:2px solid var(--border);background:#fff;padding:6px">
+                    <div style="flex:1;min-width:220px">
+                        <div id="qrbCheckinDesc" style="font-size:13px;color:var(--text3);line-height:1.6;margin-bottom:12px">Guests scan this to check in themselves.</div>
+                        <button class="btn btn-dark btn-sm" data-i18n="qrDownloadBtn" onclick="downloadQR('qrCheckinBuilderImg','checkin')">⬇️ Download</button>
+                        <a class="btn btn-gold btn-sm" id="qrAllRoomsBtn" target="_blank" rel="noopener" data-i18n="qrbAllRooms">🖨️ All room QR codes</a>
+                    </div>
                 </div>
             </div>
 
@@ -1547,7 +1564,7 @@ DASHBOARD_HTML = """
                     const nextSt   = REQ_NEXT_STATUS[r.status];
                     const time = r.created_at ? r.created_at.slice(5,16) : '';
                     return `<tr>
-                        <td><b>${{r.room}}</b></td>
+                        <td><b>${{esc(r.room)}}</b></td>
                         <td class="hide-mobile" style="color:var(--text2)">${{esc(r.guest_name || '—')}}</td>
                         <td class="hide-mobile"><span class="${{catClass}}">${{catLabel}}</span></td>
                         <td><div class="req-msg" title="${{esc(r.message)}}">${{esc(r.message)}}</div></td>
@@ -1988,7 +2005,7 @@ DASHBOARD_HTML = """
                 : 'var(--bg3)';
             const textColor = isMe ? '#1a1a1a' : 'var(--text)';
             return `<div style="display:flex;flex-direction:column;align-items:${{align}};gap:3px">
-                <div style="font-size:11px;color:${{roleColor}};font-weight:600;${{isMe?'text-align:right':''}}">${{m.sender}}</div>
+                <div style="font-size:11px;color:${{roleColor}};font-weight:600;${{isMe?'text-align:right':''}}">${{escHtml(m.sender)}}</div>
                 <div style="max-width:72%;background:${{bubbleBg}};color:${{textColor}};padding:9px 14px;border-radius:16px;font-size:13px;line-height:1.5;word-break:break-word">${{escHtml(m.message)}}</div>
                 <div style="font-size:10px;color:var(--text3)">${{m.created_at.slice(11,16)}}</div>
             </div>`;
@@ -2297,6 +2314,35 @@ DASHBOARD_HTML = """
             box.style.display = box.style.display === 'none' ? 'flex' : 'none';
             document.getElementById('checkinLinkText').textContent =
                 window.location.origin + '/hotel/' + slug + '/checkin';
+            const qr = document.getElementById('checkinQrImg');
+            if (qr && !qr.src) qr.src = '/hotel/' + slug + '/qr-checkin';
+        }}
+
+        function showGuestQR(room) {{
+            // Room QR is generated on the fly for any room number (even outside the
+            // configured range), so every guest gets a working code for the chat.
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999';
+            overlay.onclick = () => overlay.remove();
+            const card = document.createElement('div');
+            card.style.cssText = 'background:#fff;padding:22px;border-radius:16px;text-align:center;max-width:90vw';
+            card.onclick = (e) => e.stopPropagation();
+            const img = document.createElement('img');
+            img.src = '/hotel/' + slug + '/qr/' + encodeURIComponent(room);
+            img.style.cssText = 'width:240px;height:240px;max-width:70vw';
+            const lbl = document.createElement('div');
+            lbl.textContent = '🚪 ' + room;
+            lbl.style.cssText = 'color:#111;font-weight:700;margin-top:10px;font-size:18px';
+            const sub = document.createElement('div');
+            sub.textContent = (DASH_I18N[_dashLang] || DASH_I18N.en).qrGuestHint || 'Guest scans → enters the chat';
+            sub.style.cssText = 'color:#666;font-size:12px;margin-top:4px';
+            const btn = document.createElement('button');
+            btn.textContent = '✕';
+            btn.style.cssText = 'margin-top:12px;padding:8px 20px;border:none;border-radius:8px;background:#C9A84C;color:#000;font-weight:700;cursor:pointer';
+            btn.onclick = () => overlay.remove();
+            card.append(img, lbl, sub, btn);
+            overlay.appendChild(card);
+            document.body.appendChild(overlay);
         }}
 
         function copyCheckinLink() {{
@@ -2351,7 +2397,7 @@ DASHBOARD_HTML = """
                             · ⏰ ${{g.created_at}}
                         </div>
                     </div>
-                    <div class="guest-room">🚪 ${{g.room || '—'}}</div>
+                    <div class="guest-room">🚪 ${{g.room ? esc(g.room) : '—'}}</div>
                     <span class="status-badge status-${{g.status}}">${{STATUS_LABELS[g.status] || g.status}}</span>
                     <div class="guest-actions">
                         ${{g.status === 'pending' ? `
@@ -2359,6 +2405,9 @@ DASHBOARD_HTML = """
                         ` : ''}}
                         ${{g.status === 'checked_in' ? `
                             <button class="guest-btn guest-btn-red" onclick="checkOutGuest(${{g.id}})">✗ Çıkış</button>
+                        ` : ''}}
+                        ${{g.room ? `
+                            <button class="guest-btn guest-btn-gold" onclick="showGuestQR('${{esc(g.room)}}')">📱 QR</button>
                         ` : ''}}
                         ${{(!g.room || g.status === 'pending') ? `
                             <button class="guest-btn guest-btn-gold" onclick="assignRoom(${{g.id}})">🚪 Oda</button>
@@ -2864,6 +2913,11 @@ DASHBOARD_HTML = """
             hideAllViews();
             document.getElementById('qrBuilderView').style.display = 'block';
             document.getElementById('nt_qr').closest('.nav-item').classList.add('active');
+            // Fill in the check-in QR and the link to the full printable room-QR page.
+            const ci = document.getElementById('qrCheckinBuilderImg');
+            if (ci && !ci.src.endsWith('/qr-checkin')) ci.src = '/hotel/' + slug + '/qr-checkin';
+            const allBtn = document.getElementById('qrAllRoomsBtn');
+            if (allBtn) allBtn.href = '/hotel/' + slug + '/qrcodes';
         }}
 
         function generateCustomQR() {{
@@ -3082,7 +3136,7 @@ DASHBOARD_HTML = """
                 fAllLbl:'All', fUrgentLbl:'Urgent', fUserLbl:'Guest',
                 thPriority:'Priority', thRoom:'Room', thWho:'Who', thMsg:'Message', thTime:'Time',
                 guestsTitle:'🛎️ Check-in List', guestsSub:'Guests who completed digital check-in',
-                btnRefresh:'Refresh', btnCheckinLink:'Check-in Link',
+                btnRefresh:'↻ Refresh', btnMarkRead:'✅ Read', qrGuestHint:'Guest scans → enters the chat', btnCheckinLink:'Check-in Link',
                 gfAll:'All', gfPending:'⏳ Pending', gfIn:'✅ Checked In', gfOut:'🚪 Checked Out',
                 svcPageTitle:'🛎️ Services Menu',
                 svcSubTitle:'Hotel services catalog',
@@ -3103,7 +3157,7 @@ DASHBOARD_HTML = """
                 funnelLblGuests:'🏨 Guests reg.', funnelLblMessaged:'💬 Sent a message', funnelLblRated:'⭐ Left a rating',
                 ratingsPageTitle:'⭐ Ratings', ratingsPageSub:'Guest scores and comments',
                 qrBuilderTitle:'📱 QR Builder', qrBuilderSub:'Generate QR codes for rooms and locations',
-                qrPrintBtn:'🖨️ Print All', qrCustomTitle:'📍 Custom Location QR', qrCustomLabel:'LOCATION NAME',
+                qrPrintBtn:'🖨️ Print All', qrbCheckinTitle:'✅ Self Check-in QR', qrbCheckinDesc:'Guests scan this to check in themselves.', qrbAllRooms:'🖨️ All room QR codes', qrCustomTitle:'📍 Custom Location QR', qrCustomLabel:'LOCATION NAME',
                 qrCustomBtn:'Generate QR', qrCustomResultLabel:'QR Code:',
                 qrDownloadBtn:'⬇️ Download', qrFloorTitle:'🏢 Floor Room QR Generator',
                 qrFloorLabel:'FLOOR NUMBER', qrRoomCountLabel:'ROOMS ON THIS FLOOR',
@@ -3126,7 +3180,7 @@ DASHBOARD_HTML = """
                 fAllLbl:'Все', fUrgentLbl:'Срочные', fUserLbl:'Гость',
                 thPriority:'Приоритет', thRoom:'Номер', thWho:'Кто', thMsg:'Сообщение', thTime:'Время',
                 guestsTitle:'🛎️ Список заездов', guestsSub:'Гости, прошедшие цифровой check-in',
-                btnRefresh:'Обновить', btnCheckinLink:'Ссылка check-in',
+                btnRefresh:'↻ Обновить', btnMarkRead:'✅ Прочитано', qrGuestHint:'Гость сканирует → входит в чат', btnCheckinLink:'Ссылка check-in',
                 gfAll:'Все', gfPending:'⏳ Ожидают', gfIn:'✅ Заселились', gfOut:'🚪 Выехали',
                 svcPageTitle:'🛎️ Меню услуг',
                 svcSubTitle:'Каталог услуг отеля',
@@ -3147,7 +3201,7 @@ DASHBOARD_HTML = """
                 funnelLblGuests:'🏨 Гостей зарег.', funnelLblMessaged:'💬 Написали в чат', funnelLblRated:'⭐ Оставили рейтинг',
                 ratingsPageTitle:'⭐ Рейтинги', ratingsPageSub:'Оценки и комментарии гостей',
                 qrBuilderTitle:'📱 QR Конструктор', qrBuilderSub:'Генерация QR-кодов для номеров и локаций',
-                qrPrintBtn:'🖨️ Печать', qrCustomTitle:'📍 QR для произвольного места', qrCustomLabel:'НАЗВАНИЕ МЕСТА',
+                qrPrintBtn:'🖨️ Печать', qrbCheckinTitle:'✅ QR для заселения', qrbCheckinDesc:'Гость сканирует и сам проходит заселение.', qrbAllRooms:'🖨️ Все QR комнат', qrCustomTitle:'📍 QR для произвольного места', qrCustomLabel:'НАЗВАНИЕ МЕСТА',
                 qrCustomBtn:'Создать QR', qrCustomResultLabel:'QR-код:',
                 qrDownloadBtn:'⬇️ Скачать', qrFloorTitle:'🏢 Генератор QR по этажам',
                 qrFloorLabel:'НОМЕР ЭТАЖА', qrRoomCountLabel:'КОМНАТ НА ЭТАЖЕ',
@@ -3170,7 +3224,7 @@ DASHBOARD_HTML = """
                 fAllLbl:'Tümü', fUrgentLbl:'Acil', fUserLbl:'Misafir',
                 thPriority:'Öncelik', thRoom:'Oda', thWho:'Kim', thMsg:'Mesaj', thTime:'Saat',
                 guestsTitle:'🛎️ Check-in Listesi', guestsSub:'Dijital check-in yapan misafirler',
-                btnRefresh:'Yenile', btnCheckinLink:'Check-in Linki',
+                btnRefresh:'↻ Yenile', btnMarkRead:'✅ Okundu', qrGuestHint:'Misafir okutarak sohbete girer', btnCheckinLink:'Check-in Linki',
                 gfAll:'Tümü', gfPending:'⏳ Bekliyor', gfIn:'✅ İçeride', gfOut:'🚪 Çıktı',
                 svcPageTitle:'🛎️ Hizmetler Menüsü',
                 svcSubTitle:'Otel hizmetleri kataloğu',
@@ -3191,7 +3245,7 @@ DASHBOARD_HTML = """
                 funnelLblGuests:'🏨 Kayıtlı misafir', funnelLblMessaged:'💬 Mesaj gönderdi', funnelLblRated:'⭐ Değerlendirme bıraktı',
                 ratingsPageTitle:'⭐ Değerlendirmeler', ratingsPageSub:'Misafir puanları ve yorumlar',
                 qrBuilderTitle:'📱 QR Oluşturucu', qrBuilderSub:'Odalar ve konumlar için QR kodu oluşturun',
-                qrPrintBtn:'🖨️ Yazdır', qrCustomTitle:'📍 Özel Konum QR', qrCustomLabel:'KONUM ADI',
+                qrPrintBtn:'🖨️ Yazdır', qrbCheckinTitle:'✅ Self Check-in QR', qrbCheckinDesc:'Misafir bu QR ile kendi check-in yapar.', qrbAllRooms:'🖨️ Tüm oda QR kodları', qrCustomTitle:'📍 Özel Konum QR', qrCustomLabel:'KONUM ADI',
                 qrCustomBtn:'QR Oluştur', qrCustomResultLabel:'QR Kodu:',
                 qrDownloadBtn:'⬇️ İndir', qrFloorTitle:'🏢 Kat Bazlı QR Oluşturucu',
                 qrFloorLabel:'KAT NUMARASI', qrRoomCountLabel:'BU KATTAKİ ODA SAYISI',
@@ -3214,7 +3268,7 @@ DASHBOARD_HTML = """
                 fAllLbl:"Barchasi", fUrgentLbl:"Shoshilinch", fUserLbl:"Mehmon",
                 thPriority:"Muhimlik", thRoom:"Xona", thWho:"Kim", thMsg:"Xabar", thTime:"Vaqt",
                 guestsTitle:"🛎️ Check-in Ro'yxati", guestsSub:"Raqamli check-in qilgan mehmonlar",
-                btnRefresh:"Yangilash", btnCheckinLink:"Check-in Havolasi",
+                btnRefresh:"↻ Yangilash", btnMarkRead:"✅ O'qildi", qrGuestHint:"Mehmon skanerlaydi → chatga kiradi", btnCheckinLink:"Check-in Havolasi",
                 gfAll:"Barchasi", gfPending:"⏳ Kutmoqda", gfIn:"✅ Ichkarida", gfOut:"🚪 Chiqdi",
                 svcPageTitle:"🛎️ Xizmatlar Menyusi",
                 svcSubTitle:"Mehmonxona xizmatlari katalogi",
@@ -3235,7 +3289,7 @@ DASHBOARD_HTML = """
                 funnelLblGuests:"🏨 Ro'yxatdagi mehmonlar", funnelLblMessaged:"💬 Xabar yozdi", funnelLblRated:"⭐ Reyting qoldirdi",
                 ratingsPageTitle:"⭐ Reytinglar", ratingsPageSub:"Mehmon ballari va sharhlari",
                 qrBuilderTitle:"📱 QR Yaratuvchi", qrBuilderSub:"Xonalar va joylar uchun QR kodlar yarating",
-                qrPrintBtn:"🖨️ Chop etish", qrCustomTitle:"📍 Maxsus joy QR kodi", qrCustomLabel:"JOY NOMI",
+                qrPrintBtn:"🖨️ Chop etish", qrbCheckinTitle:"✅ Check-in QR", qrbCheckinDesc:"Mehmon buni skanerlab o'zi check-in qiladi.", qrbAllRooms:"🖨️ Barcha xona QR kodlari", qrCustomTitle:"📍 Maxsus joy QR kodi", qrCustomLabel:"JOY NOMI",
                 qrCustomBtn:"QR Yaratish", qrCustomResultLabel:"QR Kod:",
                 qrDownloadBtn:"⬇️ Yuklab olish", qrFloorTitle:"🏢 Qavat bo'yicha QR yaratuvchi",
                 qrFloorLabel:"QAVAT RAQAMI", qrRoomCountLabel:"BU QAVATDAGI XONALAR SONI",
@@ -3253,6 +3307,12 @@ DASHBOARD_HTML = """
                 const el = document.getElementById(id);
                 if (el) el.textContent = L[id];
             }});
+            // Also translate any element tagged with data-i18n (lets repeated labels
+            // like the Refresh buttons share one translation key).
+            document.querySelectorAll('[data-i18n]').forEach(el => {{
+                const k = el.getAttribute('data-i18n');
+                if (L[k]) el.textContent = L[k];
+            }});
             document.querySelectorAll('.lang-btn-dash').forEach(b => {{
                 b.classList.toggle('active', b.textContent === _dashLang.toUpperCase());
             }});
@@ -3262,6 +3322,11 @@ DASHBOARD_HTML = """
             _dashLang = l;
             localStorage.setItem('ss_lang', l);
             applyDashLang();
+            // Re-render dynamically-built content (charts, analytics funnel, lists)
+            // so it switches language immediately instead of waiting for the next
+            // poll. Each is guarded — loaders no-op safely if their data isn't ready.
+            [loadData, loadCharts, loadAnalytics, loadRequests, loadRatings, loadGuests]
+                .forEach(fn => {{ try {{ if (typeof fn === 'function') fn(); }} catch(e) {{}} }});
         }}
 
         async function translateMsg(e, btn) {{
@@ -3321,4 +3386,5 @@ DASHBOARD_HTML = """
 """
 
 def get_dashboard_html(hotel_name="SmartStay"):
-    return DASHBOARD_HTML.format(hotel_name=hotel_name)
+    import html as _html
+    return DASHBOARD_HTML.format(hotel_name=_html.escape(hotel_name or "SmartStay"))

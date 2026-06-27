@@ -7,7 +7,7 @@ from typing import List
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-import json, sqlite3, asyncio, io, smtplib, ssl, os, hmac, hashlib
+import json, sqlite3, asyncio, io, smtplib, ssl, os, hmac, hashlib, html
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import date
@@ -16,11 +16,11 @@ import qrcode
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 
-from config import MANAGER_PASSWORD, ADMIN_PASSWORD, INVITE_CODE, PLAN_LIMITS, SECURE_COOKIES, DATABASE_PATH, CRON_SECRET, GUEST_TOKEN_SECRET
+from config import ADMIN_PASSWORD, INVITE_CODE, PLAN_LIMITS, SECURE_COOKIES, DATABASE_PATH, CRON_SECRET, GUEST_TOKEN_SECRET
 from database import (
-    init_db, save_message, get_messages,
+    init_db,
     create_hotel, get_hotel, get_all_hotels, get_hotel_messages,
-    save_hotel_message, mark_hotel_read, mark_all_read,
+    save_hotel_message, mark_hotel_read,
     update_hotel, verify_password, migrate_password_if_needed,
     get_room_messages, get_new_messages, save_staff_message,
     save_rating, get_hotel_avg_rating, get_monthly_message_count,
@@ -36,7 +36,7 @@ from database import (
     get_room_notes, save_room_note, delete_room_note,
     create_staff, get_staff_list, get_staff_by_credentials,
     get_staff_by_id, update_staff_password, delete_staff,
-    update_hotel_stripe, get_hotel_by_stripe_customer,
+    update_hotel_stripe, get_hotel_by_stripe_customer, stripe_event_already_processed,
     create_owner, get_owner_by_email, get_owner_by_id, get_all_owners,
     assign_hotel_to_owner, remove_hotel_from_owner,
     get_owner_hotels, get_hotel_owner_ids,
@@ -44,7 +44,8 @@ from database import (
     save_staff_msg, get_staff_msgs, get_staff_msgs_since, STAFF_CHANNELS,
     generate_room_numbers,
 )
-from telegram import send_urgent_alert, send_telegram, set_webhook
+from telegram import send_telegram, set_webhook
+from notifications import nt, notif_lang
 from templates.chat_html import get_chat_html
 from templates.checkin_html import get_checkin_html
 from templates.dashboard_html import get_dashboard_html
@@ -98,6 +99,36 @@ def _is_guest_for_room(request: Request, slug: str, room: str) -> bool:
     return stored_room == room and hmac.compare_digest(stored_hmac, expected)
 
 
+# ===== SIGNED AUTH COOKIE HELPERS =====
+# Privileged cookies (manager/admin/owner/staff/hotel) must be tamper-proof.
+# Value format: "{payload}.{hmac}". The HMAC is keyed with GUEST_TOKEN_SECRET so
+# a client cannot forge e.g. admin_auth without knowing the server secret.
+
+def _make_signed(payload: str) -> str:
+    sig = hmac.new(GUEST_TOKEN_SECRET.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}.{sig}"
+
+def _read_signed(signed: str) -> str | None:
+    """Return the verified payload, or None if missing/tampered."""
+    if not signed or "." not in signed:
+        return None
+    payload, _, sig = signed.rpartition(".")
+    expected = hmac.new(GUEST_TOKEN_SECRET.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    if hmac.compare_digest(sig, expected):
+        return payload
+    return None
+
+def _is_admin(request: Request) -> bool:
+    return _read_signed(request.cookies.get("admin_auth", "")) == "admin"
+
+def _verified_hotel_slug_cookie(request: Request) -> str:
+    """Return the slug from a valid signed hotel_slug cookie, or '' if invalid."""
+    payload = _read_signed(request.cookies.get("hotel_slug", ""))
+    if payload and payload.startswith("hotelslug:"):
+        return payload.split(":", 1)[1]
+    return ""
+
+
 # ===== EMAIL HELPER =====
 async def send_email(hotel: dict, subject: str, body_html: str) -> bool:
     """Send an HTML email using hotel's own SMTP config. Returns True on success."""
@@ -140,13 +171,6 @@ async def send_email(hotel: dict, subject: str, body_html: str) -> bool:
     return await asyncio.to_thread(_send)
 
 
-HOTEL_INFO = """
-Ты AI консьерж отеля SmartStay Resort 5* в Анталии, Турция.
-Отвечай ТОЛЬКО на языке на котором пишет гость.
-Отвечай коротко, дружелюбно и по делу.
-Если не знаешь ответ — скажи "Уточню у персонала".
-"""
-
 init_db()
 
 # ===== PYDANTIC MODELS =====
@@ -166,9 +190,6 @@ class RegisterRequest(BaseModel):
     room_count: int = 30
     room_start: int = 101
     rooms_per_floor: int = 0
-
-class LoginRequest(BaseModel):
-    password: str
 
 class HotelLoginRequest(BaseModel):
     slug: str
@@ -258,13 +279,18 @@ def api_register(data: RegisterRequest):
     if INVITE_CODE and data.invite_code.strip() != INVITE_CODE:
         return {"ok": False, "error": "Geçersiz davet kodu"}
 
-    slug = data.slug.strip()
+    slug = data.slug.strip().lower()
     name = data.name.strip()
     password = data.password.strip()
     info = data.info.strip()
 
     if not all([slug, name, password, info]):
         return {"ok": False, "error": "Zorunlu alanlar eksik"}
+    # Slug is used in URLs and cookie names (auth_{slug}, guest_{slug}), so it must
+    # be a safe, restricted token — reject spaces, slashes, dots, unicode, etc.
+    import re as _re
+    if not _re.fullmatch(r"[a-z0-9-]{2,40}", slug):
+        return {"ok": False, "error": "Slug yalnızca a-z, 0-9 ve tire (-) içerebilir (2-40 karakter)"}
     if get_hotel(slug):
         return {"ok": False, "error": "Bu slug zaten kullanılıyor"}
 
@@ -281,16 +307,8 @@ def api_register(data: RegisterRequest):
 # ===== LOGIN =====
 @app.get("/login", response_class=HTMLResponse)
 def login_page():
+    # Manager login form — asks for hotel slug + password, posts to /api/hotel-login.
     return get_login_html()
-
-@app.post("/api/login")
-@limiter.limit("5/minute")
-def api_login(data: LoginRequest, request: Request, response: Response):
-    if data.password == MANAGER_PASSWORD:
-        response.set_cookie("manager_auth", "yes", max_age=86400,
-                            httponly=True, secure=SECURE_COOKIES, samesite="lax")
-        return {"ok": True}
-    return {"ok": False}
 
 @app.get("/hotel/{slug}/login", response_class=HTMLResponse)
 def hotel_login_page(slug: str):
@@ -308,7 +326,7 @@ def api_hotel_login(data: HotelLoginRequest, request: Request):
         response = JSONResponse({"ok": True})
         response.set_cookie(
             key=f"auth_{data.slug}",
-            value="yes",
+            value=_make_signed(f"hotel:{data.slug}"),
             max_age=86400,
             httponly=True,
             secure=SECURE_COOKIES,
@@ -325,12 +343,6 @@ def hotel_logout(slug: str, response: Response):
     return RedirectResponse(f"/hotel/{slug}/login", status_code=302)
 
 # ===== DASHBOARD =====
-@app.get("/dashboard", response_class=HTMLResponse)
-def dashboard(request: Request):
-    if request.cookies.get("manager_auth") != "yes":
-        return RedirectResponse("/login")
-    return get_dashboard_html()
-
 @app.get("/hotel/{slug}/dashboard", response_class=HTMLResponse)
 def hotel_dashboard(slug: str, request: Request):
     hotel = get_hotel(slug)
@@ -524,7 +536,9 @@ async def hotel_chat_api(request: Request, slug: str, data: ChatRequest):
 
     message = data.message.strip()
     room = data.room.strip() or "101"
-    history = data.history
+    # history is fully client-supplied — cap it so a client can't run up token
+    # costs (or stuff the context) with an arbitrarily long conversation.
+    history = data.history[-20:] if data.history else []
 
     if not message:
         return JSONResponse({"error": "Empty message"}, status_code=400)
@@ -553,10 +567,14 @@ async def hotel_chat_api(request: Request, slug: str, data: ChatRequest):
         guest_name = f"{guest['first_name']} {guest['last_name']}" if guest else ""
         save_request(slug, room, guest_name, req_category, message)
 
+    nlang = notif_lang(hotel)  # notifications in the hotel's language
+    from datetime import datetime as _dt_n
     if priority == "urgent":
         async def _send_urgent_and_map():
-            msg_id = await send_urgent_alert(
-                hotel_name=hotel["name"], room=room, message=message,
+            tg_text = nt(nlang, "urgent", hotel=hotel["name"], room=room,
+                         message=message, time=_dt_n.now().strftime("%H:%M"))
+            msg_id = await send_telegram(
+                tg_text,
                 token=hotel.get("telegram_token"),
                 chat_id=hotel.get("telegram_chat_id")
             )
@@ -566,13 +584,8 @@ async def hotel_chat_api(request: Request, slug: str, data: ChatRequest):
     elif hotel.get("telegram_token") and hotel.get("telegram_chat_id"):
         # Non-urgent messages: also send to Telegram and save mapping
         async def _send_normal_and_map():
-            from datetime import datetime as _dt
-            tg_text = (
-                f"💬 <b>{hotel['name']}</b>\n"
-                f"🚪 Oda {room} · {_dt.now().strftime('%H:%M')}\n"
-                f"{message}\n\n"
-                f"<i>↩️ Yanıt vermek için bu mesaja cevap verin.</i>"
-            )
+            tg_text = nt(nlang, "new_msg", hotel=hotel["name"], room=room,
+                         time=_dt_n.now().strftime("%H:%M"), message=message)
             msg_id = await send_telegram(
                 tg_text,
                 token=hotel.get("telegram_token"),
@@ -717,42 +730,6 @@ async def hotel_chat_api(request: Request, slug: str, data: ChatRequest):
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
-# ===== MAIN CHAT =====
-@app.post("/chat")
-@limiter.limit("30/minute")
-async def chat(request: Request, data: ChatRequest):
-    message = data.message.strip()
-    room = data.room.strip() or "101"
-    history = data.history
-
-    if not message:
-        return JSONResponse({"error": "Empty message"}, status_code=400)
-    if not room.isalnum():
-        return JSONResponse({"error": "Geçersiz oda numarası"}, status_code=400)
-
-    save_message(room, "user", message)
-    history.append({"role": "user", "content": message})
-
-    def generate():
-        try:
-            full_response = []
-            with client.messages.stream(
-                model="claude-sonnet-4-5",
-                max_tokens=500,
-                system=HOTEL_INFO + f"\n\nНомер гостя: {room}.",
-                messages=history
-            ) as stream:
-                for text in stream.text_stream:
-                    full_response.append(text)
-                    yield f"data: {json.dumps({'text': text})}\n\n"
-            save_message(room, "bot", "".join(full_response))
-            yield f"data: {json.dumps({'done': True})}\n\n"
-        except Exception as e:
-            print(f"[Claude stream error] demo/{room}: {e}")
-            yield f"data: {json.dumps({'error': 'Üzgünüm, şu an bağlanamıyorum. Lütfen bir dakika sonra tekrar deneyin.'})}\n\n"
-
-    return StreamingResponse(generate(), media_type="text/event-stream")
-
 # ===== TRANSLATE =====
 @app.post("/api/translate")
 @limiter.limit("60/minute")
@@ -803,6 +780,10 @@ async def api_checkin(request: Request, slug: str, data: CheckinRequest):
         return JSONResponse({"ok": False, "error": "Ad, soyad ve pasaport zorunludur"})
     if not data.room.strip():
         return JSONResponse({"ok": False, "error": "Oda numarası zorunludur"})
+    # Room is guest-supplied and later rendered in the staff dashboard — restrict
+    # it to a safe token (alphanumeric, max 20) to prevent stored XSS / injection.
+    if not data.room.strip().isalnum() or len(data.room.strip()) > 20:
+        return JSONResponse({"ok": False, "error": "Geçersiz oda numarası"})
     if data.check_out <= data.check_in:
         return JSONResponse({"ok": False, "error": "Çıkış tarihi giriş tarihinden sonra olmalı"})
 
@@ -850,13 +831,11 @@ async def api_checkin(request: Request, slug: str, data: CheckinRequest):
     # Set status to checked_in immediately
     update_guest_status(guest_id, "checked_in")
 
-    # Telegram notification to manager
-    tg_text = (
-        f"🏨 <b>Yeni Check-in!</b>\n"
-        f"👤 {data.first_name} {data.last_name} ({data.nationality})\n"
-        f"🚪 Oda: {data.room}\n"
-        f"📅 {data.check_in} → {data.check_out}\n"
-        f"🪪 Pasaport: {data.passport}"
+    # Telegram notification to manager (in the hotel's language)
+    tg_text = nt(
+        notif_lang(hotel), "checkin",
+        name=f"{data.first_name} {data.last_name}", nat=data.nationality,
+        room=data.room, ci=data.check_in, co=data.check_out, passport=data.passport,
     )
     asyncio.create_task(
         send_telegram(
@@ -926,13 +905,11 @@ async def hotel_rate(request: Request, slug: str, data: RatingRequest):
     booking_url = hotel.get("booking_url", "")
 
     if data.rating <= 3:
-        # Low rating — alert manager immediately
-        tg_text = (
-            f"⚠️ <b>Düşük Puan Alındı!</b>\n"
-            f"🏨 Otel: {hotel['name']}\n"
-            f"🚪 Oda: {data.room}\n"
-            f"⭐ Puan: {'★' * data.rating}{'☆' * (5 - data.rating)} ({data.rating}/5)\n"
-            f"⏰ Şimdi harekete geçin — misafir ayrılmadan sorunu çözün!"
+        # Low rating — alert manager immediately (in the hotel's language)
+        tg_text = nt(
+            notif_lang(hotel), "low_rating",
+            hotel=hotel["name"], room=data.room,
+            stars=f"{'★' * data.rating}{'☆' * (5 - data.rating)}", rating=data.rating,
         )
         asyncio.create_task(send_telegram(
             tg_text,
@@ -959,11 +936,8 @@ async def staff_reply(slug: str, room: str, data: ReplyRequest, request: Request
     if hotel and hotel.get("telegram_token") and hotel.get("telegram_chat_id"):
         async def _fwd():
             from datetime import datetime as _dt
-            tg_text = (
-                f"📤 <b>Personel yanıtı</b> — {hotel['name']}\n"
-                f"🚪 Oda {room} · {_dt.now().strftime('%H:%M')}\n"
-                f"{message}"
-            )
+            tg_text = nt(notif_lang(hotel), "staff_reply", hotel=hotel["name"],
+                         room=room, time=_dt.now().strftime("%H:%M"), message=message)
             await send_telegram(tg_text, token=hotel["telegram_token"],
                                 chat_id=hotel["telegram_chat_id"])
         asyncio.create_task(_fwd())
@@ -979,7 +953,9 @@ def room_messages(slug: str, room: str, request: Request):
 
 @app.get("/api/hotel/{slug}/room/{room}/new-messages")
 def room_new_messages(slug: str, room: str, since_id: int = 0, request: Request = None):
-    if request and not get_auth_role(request, slug)[0]:
+    # Accessible to staff/manager OR the guest who owns this room (via signed QR
+    # cookie) — the guest chat polls this to receive staff replies.
+    if request and not get_auth_role(request, slug)[0] and not _is_guest_for_room(request, slug, room):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     return get_new_messages(slug, room, since_id)
 
@@ -1005,7 +981,8 @@ def room_history_public(slug: str, room: str, request: Request):
 
 # ===== AUTO WELCOME MESSAGE =====
 @app.post("/api/hotel/{slug}/room/{room}/welcome")
-async def auto_welcome(slug: str, room: str):
+@limiter.limit("10/minute")
+async def auto_welcome(slug: str, room: str, request: Request):
     """
     Called on first chat open when history is empty and guest is checked in.
     Generates a personalised welcome via Claude Haiku and saves it as a bot message.
@@ -1090,19 +1067,6 @@ async def auto_welcome(slug: str, room: str):
     return {"message": welcome_text}
 
 
-# ===== API MESSAGES =====
-@app.get("/api/messages")
-def api_messages():
-    rows = get_messages()
-    return [{"room": r[0], "role": r[1], "message": r[2], "created_at": r[3], "priority": r[4], "is_read": r[5]} for r in rows]
-
-@app.post("/api/mark-read")
-def mark_read(request: Request):
-    if request.cookies.get("manager_auth") != "yes":
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
-    mark_all_read()
-    return {"status": "ok"}
-
 @app.get("/api/hotel/{slug}/export")
 def hotel_export(slug: str, request: Request):
     if not get_auth_role(request, slug)[0]:
@@ -1156,10 +1120,12 @@ def hotel_export(slug: str, request: Request):
     buf.seek(0)
 
     filename = f"{hotel['name']}-mesajlar.xlsx"
+    from urllib.parse import quote
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={"Content-Disposition":
+                 f"attachment; filename=mesajlar.xlsx; filename*=UTF-8''{quote(filename)}"}
     )
 
 @app.get("/api/hotel/{slug}/guests/export")
@@ -1215,10 +1181,12 @@ def hotel_guests_export(slug: str, request: Request):
     buf.seek(0)
 
     filename = f"{hotel['name']}-misafirler.xlsx"
+    from urllib.parse import quote
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"}
+        headers={"Content-Disposition":
+                 f"attachment; filename=misafirler.xlsx; filename*=UTF-8''{quote(filename)}"}
     )
 
 @app.get("/api/hotel/{slug}/ratings")
@@ -1261,7 +1229,7 @@ def hotel_stats(slug: str, request: Request):
             SUM(CASE WHEN role='user' THEN 1 ELSE 0 END) as guests
         FROM messages
         WHERE hotel_slug=?
-        AND created_at >= date('now', '-7 days')
+        AND created_at >= date('now', '-7 days', 'localtime')
         GROUP BY day
         ORDER BY day ASC
     """, (slug,)).fetchall()
@@ -1289,7 +1257,7 @@ def hotel_stats(slug: str, request: Request):
     rating_trend = conn.execute("""
         SELECT substr(created_at, 1, 10) as day, ROUND(AVG(rating), 2) as avg_r, COUNT(*) as cnt
         FROM ratings WHERE hotel_slug=?
-        AND created_at >= date('now', '-7 days')
+        AND created_at >= date('now', '-7 days', 'localtime')
         GROUP BY day ORDER BY day ASC
     """, (slug,)).fetchall()
 
@@ -1351,12 +1319,15 @@ def hotel_analytics(slug: str, request: Request):
         SELECT substr(created_at, 1, 10) as day, COUNT(*) as cnt
         FROM messages
         WHERE hotel_slug=? AND role='user'
-          AND created_at >= date('now', '-29 days')
+          AND created_at >= date('now', '-29 days', 'localtime')
         GROUP BY day ORDER BY day ASC
     """, (slug,)).fetchall()
-    # Fill missing days with 0
+    # Fill missing days with 0.
+    # created_at is stored in local time (datetime.now), so bucket dates and the
+    # SQL window must also use local time — otherwise the last bucket is off by a
+    # day when the server runs in a non-UTC timezone.
     from datetime import datetime as _dt, timedelta as _td
-    today = _dt.utcnow().date()
+    today = _dt.now().date()
     day_map = {r[0]: r[1] for r in rows_30}
     messages_by_day = []
     for i in range(29, -1, -1):
@@ -1368,7 +1339,7 @@ def hotel_analytics(slug: str, request: Request):
         SELECT CAST(substr(created_at, 12, 2) AS INTEGER) as hour, COUNT(*) as cnt
         FROM messages
         WHERE hotel_slug=? AND role='user'
-          AND created_at >= date('now', '-29 days')
+          AND created_at >= date('now', '-29 days', 'localtime')
         GROUP BY hour ORDER BY hour ASC
     """, (slug,)).fetchall()
     hour_map = {r[0]: r[1] for r in rows_hour}
@@ -1555,6 +1526,11 @@ def hotel_qrcodes(slug: str, request: Request):
     rooms_per_floor = hotel.get("rooms_per_floor", 0)
     rooms = generate_room_numbers(room_count, room_start, rooms_per_floor)
 
+    # Hotel name is hotel-controlled and this page is unauthenticated → escape.
+    # name_html for HTML text; name_js for the inline-<script> JS string literal.
+    name_html = html.escape(hotel["name"])
+    name_js = json.dumps(hotel["name"]).replace("</", "<\\/")
+
     # Room cards
     room_cards = "".join([f"""
         <div class="card">
@@ -1576,7 +1552,7 @@ def hotel_qrcodes(slug: str, request: Request):
         </div>""" for zone_id, icon, label in zones])
 
     return f"""<!DOCTYPE html>
-    <html><head><meta charset="utf-8"><title>QR — {hotel['name']}</title>
+    <html><head><meta charset="utf-8"><title>QR — {name_html}</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         *{{margin:0;padding:0;box-sizing:border-box}}
@@ -1595,7 +1571,7 @@ def hotel_qrcodes(slug: str, request: Request):
         @media print{{.btns{{display:none}}}}
     </style></head>
     <body>
-        <h1 id="qrTitle">🏨 {hotel['name']} — QR Kodlar</h1>
+        <h1 id="qrTitle">🏨 {name_html} — QR Kodlar</h1>
         <p class="subtitle" id="qrSubtitle">Her odaya yapıştırın. Misafir tarar → sohbete girer. ({room_count} oda)</p>
         <div class="btns">
             <button class="btn" id="qrPrint" onclick="window.print()">🖨️ Yazdır</button>
@@ -1626,7 +1602,7 @@ def hotel_qrcodes(slug: str, request: Request):
     <script>
     (function() {{
         const lang = localStorage.getItem('ss_lang') || 'en';
-        const name = '{hotel['name']}';
+        const name = {name_js};
         const roomCount = {room_count};
         const roomRange = '{rooms[0]} – {rooms[-1]}';
         const L = {{
@@ -1683,38 +1659,6 @@ def hotel_qrcodes(slug: str, request: Request):
         }});
     }})();
     </script>
-    </body></html>"""
-
-@app.get("/qr/{room}")
-def get_qr(room: str, request: Request):
-    base = str(request.base_url).rstrip("/")
-    url = f"{base}?room={room}"
-    return Response(content=_make_qr(url), media_type="image/png")
-
-@app.get("/qrcodes", response_class=HTMLResponse)
-def qrcodes():
-    rooms = list(range(101, 111)) + list(range(201, 211)) + list(range(301, 311))
-    cards = "".join([f"""
-        <div class="card">
-            <img src="/qr/{room}">
-            <div class="room">🚪 {room}</div>
-        </div>""" for room in rooms])
-    return f"""<!DOCTYPE html>
-    <html><head><meta charset="utf-8"><title>QR Kodlar</title>
-    <style>
-        *{{margin:0;padding:0;box-sizing:border-box}}
-        body{{background:#0a0a0a;color:white;font-family:sans-serif;padding:40px}}
-        h1{{color:#C9A84C;font-size:28px;margin-bottom:32px}}
-        .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:20px}}
-        .card{{background:#111;border-radius:12px;padding:24px;text-align:center;border:1px solid #222}}
-        .card img{{width:140px;height:140px;border-radius:8px}}
-        .room{{font-size:16px;font-weight:700;color:#C9A84C;margin-top:12px}}
-        .btn{{background:#C9A84C;color:#000;border:none;padding:12px 32px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:32px}}
-    </style></head>
-    <body>
-        <h1>🏨 QR Kodlar</h1>
-        <button class="btn" onclick="window.print()">🖨️ Yazdır</button>
-        <div class="grid">{cards}</div>
     </body></html>"""
 
 # ===== ROOM NOTES =====
@@ -1777,23 +1721,28 @@ class ManualRequestCreate(BaseModel):
 @app.post("/api/hotel/{slug}/requests")
 async def create_request(slug: str, body: ManualRequestCreate, request: Request):
     # Accept manager auth, staff auth, or hotel_slug cookie (dashboard uses all three)
-    hotel_slug_cookie = request.cookies.get("hotel_slug")
     authorized, _ = get_auth_role(request, slug)
-    if not authorized and hotel_slug_cookie != slug:
+    if not authorized and _verified_hotel_slug_cookie(request) != slug:
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
-    if not body.room.strip() or not body.message.strip():
+    room = body.room.strip()
+    message = body.message.strip()
+    if not room or not message:
         return JSONResponse({"error": "Oda ve talep metni gerekli"}, status_code=400)
+    # Length caps — room/guest_name are free text entered by staff; keep them sane.
+    if len(room) > 20:
+        return JSONResponse({"error": "Geçersiz oda numarası"}, status_code=400)
+    message = message[:1000]
+    guest_name = body.guest_name.strip()[:100]
     valid_cats = {"room_service", "maintenance", "housekeeping", "general"}
     cat = body.category if body.category in valid_cats else "general"
-    req_id = save_request(slug, body.room.strip(), body.guest_name.strip(), cat, body.message.strip())
+    req_id = save_request(slug, room, guest_name, cat, message)
     return {"ok": True, "id": req_id, "pending_count": get_pending_requests_count(slug)}
 
 
 @app.get("/api/hotel/{slug}/requests")
 async def list_requests(slug: str, request: Request, status: str = ""):
-    hotel_slug_cookie = request.cookies.get("hotel_slug")
     authorized, _ = get_auth_role(request, slug)
-    if not authorized and hotel_slug_cookie != slug:
+    if not authorized and _verified_hotel_slug_cookie(request) != slug:
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     reqs = get_requests(slug, status if status else None)
     badge = get_pending_requests_count(slug)
@@ -1802,9 +1751,8 @@ async def list_requests(slug: str, request: Request, status: str = ""):
 
 @app.patch("/api/hotel/{slug}/requests/{req_id}")
 async def patch_request(slug: str, req_id: int, body: RequestStatusUpdate, request: Request):
-    hotel_slug_cookie = request.cookies.get("hotel_slug")
     authorized, _ = get_auth_role(request, slug)
-    if not authorized and hotel_slug_cookie != slug:
+    if not authorized and _verified_hotel_slug_cookie(request) != slug:
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     valid = {"pending", "in_progress", "resolved"}
     if body.status not in valid:
@@ -1817,9 +1765,8 @@ async def patch_request(slug: str, req_id: int, body: RequestStatusUpdate, reque
 
 @app.delete("/api/hotel/{slug}/requests/{req_id}")
 async def remove_request(slug: str, req_id: int, request: Request):
-    hotel_slug_cookie = request.cookies.get("hotel_slug")
     authorized, _ = get_auth_role(request, slug)
-    if not authorized and hotel_slug_cookie != slug:
+    if not authorized and _verified_hotel_slug_cookie(request) != slug:
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     ok = delete_request(req_id, slug)
     if not ok:
@@ -1931,7 +1878,7 @@ def staff_chat_send(slug: str, channel: str, body: StaffChatMessage, request: Re
         sender = "Менеджер"
         role_label = "manager"
     else:
-        staff_id_str = request.cookies.get(f"staff_{slug}", "")
+        staff_id_str = _read_signed(request.cookies.get(f"staff_{slug}", "")) or ""
         try:
             staff = get_staff_by_id(slug, int(staff_id_str))
             sender = staff["name"] if staff else "Персонал"
@@ -1989,20 +1936,24 @@ async def cron_daily_digest(secret: str = "", request: Request = None):
             continue
 
         d = get_daily_digest_data(h["slug"])
+        nlang = notif_lang(hotel)
         today_str = date.today().strftime("%d.%m.%Y")
-        rating_str = f"{d['avg_rating']} ★ ({d['rating_count']} yorum)" if d["avg_rating"] else "— yorum yok"
+        if d["avg_rating"]:
+            rating_str = f"{d['avg_rating']} ★ ({d['rating_count']} {nt(nlang, 'reviews_word')})"
+        else:
+            rating_str = nt(nlang, "rating_none")
 
         # ─── Telegram digest ───────────────────────────────────────
         if has_telegram:
             lines = [
-                f"☀️ <b>Günlük Özet — {today_str}</b>",
+                nt(nlang, "digest_title", date=today_str),
                 f"🏨 {hotel['name']}",
                 "",
-                f"🛎️ Aktif misafir: <b>{d['active_guests']}</b>",
-                f"📥 Bugün check-in: <b>{d['checkins_today']}</b>",
-                f"📤 Bugün check-out: <b>{len(d['checkouts_today'])}</b>",
-                f"📬 Okunmamış mesaj: <b>{d['unread_messages']}</b>",
-                f"⭐ Ortalama puan: <b>{rating_str}</b>",
+                nt(nlang, "digest_active", n=d['active_guests']),
+                nt(nlang, "digest_checkin", n=d['checkins_today']),
+                nt(nlang, "digest_checkout", n=len(d['checkouts_today'])),
+                nt(nlang, "digest_unread", n=d['unread_messages']),
+                nt(nlang, "digest_rating", r=rating_str),
             ]
             await send_telegram(
                 "\n".join(lines),
@@ -2013,12 +1964,8 @@ async def cron_daily_digest(secret: str = "", request: Request = None):
 
             # Individual checkout reminders via Telegram
             for guest in d["checkouts_today"]:
-                reminder = (
-                    f"⏰ <b>Check-out Hatırlatması</b>\n"
-                    f"👤 {guest['name']}\n"
-                    f"🚪 Oda: {guest['room']}\n"
-                    f"📅 Bugün çıkış yapacak — gerekli düzenlemeleri yapın."
-                )
+                reminder = nt(nlang, "checkout_reminder",
+                              name=guest['name'], room=guest['room'])
                 await send_telegram(
                     reminder,
                     token=hotel["telegram_token"],
@@ -2082,8 +2029,7 @@ async def cron_daily_digest(secret: str = "", request: Request = None):
             if hotel and hotel.get("telegram_token") and hotel.get("telegram_chat_id"):
                 async def _notify_checkout(ht=hotel, n=count):
                     await send_telegram(
-                        f"🔄 <b>Otomatik Check-out</b> — {ht['name']}\n"
-                        f"{n} misafir check_out tarihi geçtiği için otomatik olarak çıkış yapıldı.",
+                        nt(notif_lang(ht), "auto_checkout", hotel=ht["name"], n=n),
                         token=ht["telegram_token"], chat_id=ht["telegram_chat_id"]
                     )
                 asyncio.create_task(_notify_checkout())
@@ -2129,9 +2075,11 @@ async def telegram_webhook(slug: str, token: str, request: Request):
     except Exception:
         return {"ok": True}
 
-    message = update.get("message", {})
-    reply_to = message.get("reply_to_message", {})
-    text = message.get("text", "").strip()
+    # Use `or {}` (not a default arg) because Telegram may send these keys with
+    # null values, or send non-message updates (edited_message, channel_post, …).
+    message = update.get("message") or {}
+    reply_to = message.get("reply_to_message") or {}
+    text = (message.get("text") or "").strip()
 
     if not text or not reply_to:
         return {"ok": True}
@@ -2160,14 +2108,14 @@ def admin_login_page():
 @limiter.limit("5/minute")
 def api_admin_login(data: AdminLoginRequest, request: Request, response: Response):
     if data.password == ADMIN_PASSWORD:
-        response.set_cookie("admin_auth", "yes", max_age=86400,
+        response.set_cookie("admin_auth", _make_signed("admin"), max_age=86400,
                             httponly=True, secure=SECURE_COOKIES, samesite="strict")
         return {"ok": True}
     return {"ok": False}
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin_panel(request: Request):
-    if request.cookies.get("admin_auth") != "yes":
+    if not _is_admin(request):
         return RedirectResponse("/admin/login")
     return get_admin_html()
 
@@ -2181,7 +2129,7 @@ class PlanUpdateRequest(BaseModel):
 
 @app.patch("/api/admin/hotel/{slug}/plan")
 def api_admin_update_plan(slug: str, data: PlanUpdateRequest, request: Request):
-    if request.cookies.get("admin_auth") != "yes":
+    if not _is_admin(request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     if data.plan not in PLAN_LIMITS:
         return JSONResponse({"error": f"Invalid plan. Choose: {list(PLAN_LIMITS)}"}, status_code=400)
@@ -2199,7 +2147,7 @@ class PasswordResetRequest(BaseModel):
 
 @app.patch("/api/admin/hotel/{slug}/password")
 def api_admin_reset_password(slug: str, data: PasswordResetRequest, request: Request):
-    if request.cookies.get("admin_auth") != "yes":
+    if not _is_admin(request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     pw = data.password.strip()
     if len(pw) < 6:
@@ -2218,14 +2166,14 @@ def api_admin_reset_password(slug: str, data: PasswordResetRequest, request: Req
 
 @app.delete("/api/admin/hotel/{slug}")
 def api_admin_delete_hotel(slug: str, request: Request):
-    if request.cookies.get("admin_auth") != "yes":
+    if not _is_admin(request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     delete_hotel(slug)
     return {"ok": True}
 
 @app.get("/api/admin/hotels")
 def api_admin_hotels(request: Request):
-    if request.cookies.get("admin_auth") != "yes":
+    if not _is_admin(request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     hotels = get_all_hotels()
     conn = sqlite3.connect(DATABASE_PATH)
@@ -2272,7 +2220,7 @@ def api_admin_hotels(request: Request):
 
 def get_auth_owner(request: Request) -> dict | None:
     """Return owner dict if owner_session cookie is valid, else None."""
-    owner_id_str = request.cookies.get("owner_session", "")
+    owner_id_str = _read_signed(request.cookies.get("owner_session", ""))
     if not owner_id_str:
         return None
     try:
@@ -2301,7 +2249,7 @@ def api_owner_login(data: OwnerLoginRequest, response: Response):
     owner = get_owner_by_email(data.email)
     if not owner or not verify_password(data.password, owner["password_hash"]):
         return JSONResponse({"ok": False, "error": "Неверный email или пароль"}, status_code=401)
-    response.set_cookie("owner_session", str(owner["id"]), max_age=86400 * 30,
+    response.set_cookie("owner_session", _make_signed(str(owner["id"])), max_age=86400 * 30,
                         httponly=True, secure=SECURE_COOKIES, samesite="strict")
     return {"ok": True}
 
@@ -2328,7 +2276,7 @@ def owner_enter_hotel(slug: str, request: Request, response: Response):
     hotel_owner_ids = get_hotel_owner_ids(slug)
     if owner["id"] not in hotel_owner_ids:
         return JSONResponse({"error": "Нет доступа к этому отелю"}, status_code=403)
-    response.set_cookie(f"auth_{slug}", "yes", max_age=86400,
+    response.set_cookie(f"auth_{slug}", _make_signed(f"hotel:{slug}"), max_age=86400,
                         httponly=True, secure=SECURE_COOKIES, samesite="strict")
     return RedirectResponse(f"/hotel/{slug}/dashboard")
 
@@ -2358,7 +2306,7 @@ def api_owner_hotels(request: Request):
 
 @app.post("/api/admin/owners")
 def api_admin_create_owner(data: CreateOwnerRequest, request: Request):
-    if request.cookies.get("admin_auth") != "yes":
+    if not _is_admin(request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     owner_id = create_owner(data.name, data.email, data.password)
     if owner_id is None:
@@ -2367,20 +2315,25 @@ def api_admin_create_owner(data: CreateOwnerRequest, request: Request):
 
 @app.get("/api/admin/owners")
 def api_admin_get_owners(request: Request):
-    if request.cookies.get("admin_auth") != "yes":
+    if not _is_admin(request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     return {"owners": get_all_owners()}
 
 @app.post("/api/admin/owners/{owner_id}/hotels")
 def api_admin_assign_hotel(owner_id: int, data: AssignHotelRequest, request: Request):
-    if request.cookies.get("admin_auth") != "yes":
+    if not _is_admin(request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    # Validate both sides exist — otherwise we'd create an orphan mapping on a typo.
+    if not get_owner_by_id(owner_id):
+        return JSONResponse({"error": "Owner not found"}, status_code=404)
+    if not get_hotel(data.hotel_slug):
+        return JSONResponse({"error": "Hotel not found"}, status_code=404)
     assign_hotel_to_owner(owner_id, data.hotel_slug)
     return {"ok": True}
 
 @app.delete("/api/admin/owners/{owner_id}/hotels/{slug}")
 def api_admin_remove_hotel(owner_id: int, slug: str, request: Request):
-    if request.cookies.get("admin_auth") != "yes":
+    if not _is_admin(request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     remove_hotel_from_owner(owner_id, slug)
     return {"ok": True}
@@ -2388,12 +2341,12 @@ def api_admin_remove_hotel(owner_id: int, slug: str, request: Request):
 # Admin impersonate hotel manager (no password needed)
 @app.get("/api/admin/hotel/{slug}/impersonate")
 def api_admin_impersonate(slug: str, request: Request, response: Response):
-    if request.cookies.get("admin_auth") != "yes":
+    if not _is_admin(request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     hotel = get_hotel(slug)
     if not hotel:
         return JSONResponse({"error": "Not found"}, status_code=404)
-    response.set_cookie(f"auth_{slug}", "yes", max_age=3600,
+    response.set_cookie(f"auth_{slug}", _make_signed(f"hotel:{slug}"), max_age=3600,
                         httponly=True, secure=SECURE_COOKIES, samesite="strict")
     return RedirectResponse(f"/hotel/{slug}/dashboard")
 
@@ -2407,9 +2360,9 @@ def get_auth_role(request: Request, slug: str) -> tuple[bool, str]:
     Manager cookie (auth_{slug}=yes) → role "manager"
     Staff cookie (staff_{slug}={id}) → look up in DB
     """
-    if request.cookies.get(f"auth_{slug}") == "yes":
+    if _read_signed(request.cookies.get(f"auth_{slug}", "")) == f"hotel:{slug}":
         return True, "manager"
-    staff_id_str = request.cookies.get(f"staff_{slug}", "")
+    staff_id_str = _read_signed(request.cookies.get(f"staff_{slug}", ""))
     if staff_id_str:
         try:
             staff = get_staff_by_id(slug, int(staff_id_str))
@@ -2449,7 +2402,7 @@ def staff_login(slug: str, data: StaffLoginRequest, request: Request, response: 
         return JSONResponse({"error": "Geçersiz kullanıcı adı veya şifre"}, status_code=401)
     response.set_cookie(
         key=f"staff_{slug}",
-        value=str(staff["id"]),
+        value=_make_signed(str(staff["id"])),
         httponly=True,
         secure=SECURE_COOKIES,
         samesite="lax",
@@ -2458,7 +2411,7 @@ def staff_login(slug: str, data: StaffLoginRequest, request: Request, response: 
     # Also set hotel_slug cookie so requests endpoints work for staff
     response.set_cookie(
         key="hotel_slug",
-        value=slug,
+        value=_make_signed(f"hotelslug:{slug}"),
         httponly=True,
         secure=SECURE_COOKIES,
         samesite="lax",
@@ -2482,7 +2435,7 @@ def hotel_me(slug: str, request: Request):
     if role == "manager":
         name = get_hotel(slug)["name"] + " Yöneticisi"
     else:
-        staff_id_str = request.cookies.get(f"staff_{slug}", "")
+        staff_id_str = _read_signed(request.cookies.get(f"staff_{slug}", "")) or ""
         try:
             staff = get_staff_by_id(slug, int(staff_id_str))
             name = staff["name"] if staff else "Personel"
@@ -2555,6 +2508,10 @@ async def stripe_webhook(request: Request):
     except Exception as e:
         print(f"[stripe webhook error] {e}")
         return JSONResponse({"error": "Bir hata oluştu, lütfen tekrar deneyin"}, status_code=400)
+
+    # Idempotency: Stripe may deliver the same event more than once. Skip if seen.
+    if stripe_event_already_processed(event.get("id", "")):
+        return {"ok": True, "duplicate": True}
 
     etype = event["type"]
     data  = event["data"]["object"]
@@ -2634,17 +2591,19 @@ async def billing_checkout(slug: str, request: Request):
 
     base_url = str(request.base_url).rstrip("/")
     try:
-        # Reuse existing customer or create a new one
+        # Reuse existing customer or let Stripe create a new one at checkout
         customer_id = hotel.get("stripe_customer_id") or None
-        session = stripe.checkout.Session.create(
-            customer=customer_id or stripe.util.UNSET,
-            customer_email=None if customer_id else None,
+        checkout_kwargs = dict(
             mode="subscription",
             line_items=[{"price": price_id, "quantity": 1}],
             metadata={"hotel_slug": slug},
             success_url=f"{base_url}/hotel/{slug}/dashboard?billing=success",
             cancel_url=f"{base_url}/hotel/{slug}/dashboard?billing=cancel",
         )
+        # Only pass `customer` when we actually have one — passing None/UNSET errors.
+        if customer_id:
+            checkout_kwargs["customer"] = customer_id
+        session = stripe.checkout.Session.create(**checkout_kwargs)
         return {"checkout_url": session.url}
     except stripe.error.StripeError as e:
         print(f"[stripe checkout error] {e}")
@@ -2704,7 +2663,7 @@ def staff_login_page(slug: str, request: Request):
     hotel = get_hotel(slug)
     if not hotel:
         return HTMLResponse("❌ Otel bulunamadı", status_code=404)
-    hotel_name = hotel["name"]
+    hotel_name = html.escape(hotel["name"])  # rendered into this public page → escape
     return HTMLResponse(f"""<!DOCTYPE html>
 <html lang="tr">
 <head>

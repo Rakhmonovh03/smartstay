@@ -1,4 +1,5 @@
 import sqlite3
+import re
 import bcrypt
 from datetime import datetime
 from config import DATABASE_PATH, URGENT_KEYWORDS
@@ -45,6 +46,15 @@ def migrate_password_if_needed(slug: str, password: str, current_hash: str) -> N
 
 def init_db():
     conn = sqlite3.connect(DATABASE_PATH)
+    # WAL lets readers and a writer work concurrently (instead of locking the whole
+    # DB), which removes most "database is locked" errors under load. journal_mode
+    # is persisted on the DB file, so it applies to every future connection too.
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA busy_timeout=5000")
+    except sqlite3.OperationalError:
+        pass
     conn.execute("""
         CREATE TABLE IF NOT EXISTS hotels (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -259,6 +269,14 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_buffet_hotel ON buffet_scans(hotel_slug, scan_time)"
     )
 
+    # Processed Stripe webhook event IDs — used for idempotency (skip retries)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS stripe_events (
+            event_id   TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL
+        )
+    """)
+
     # Internal staff-to-staff chat by channel/department
     conn.execute("""
         CREATE TABLE IF NOT EXISTS staff_chat (
@@ -285,29 +303,6 @@ def get_priority(message):
         if keyword in msg_lower:
             return "urgent"
     return "normal"
-
-
-def save_message(room, role, message):
-    priority = get_priority(message) if role == "user" else "normal"
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.execute(
-        "INSERT INTO messages (room, role, message, created_at, priority, is_read) VALUES (?, ?, ?, ?, ?, ?)",
-        (room, role, message, datetime.now().strftime("%Y-%m-%d %H:%M"), priority, 0)
-    )
-    conn.commit()
-    conn.close()
-
-
-def get_messages():
-    conn = sqlite3.connect(DATABASE_PATH)
-    rows = conn.execute(
-        """SELECT room, role, message, created_at, priority, is_read
-        FROM messages WHERE hotel_slug IS NULL
-        ORDER BY CASE priority WHEN 'urgent' THEN 0 ELSE 1 END,
-        id DESC LIMIT 100"""
-    ).fetchall()
-    conn.close()
-    return rows
 
 
 def generate_room_numbers(room_count: int, room_start: int, rooms_per_floor: int = 0) -> list:
@@ -523,6 +518,27 @@ def update_hotel_stripe(slug: str, stripe_customer_id: str = None,
         conn.execute(f"UPDATE hotels SET {', '.join(fields)} WHERE slug=?", values)
         conn.commit()
     conn.close()
+
+
+def stripe_event_already_processed(event_id: str) -> bool:
+    """
+    Atomically record a Stripe event ID. Returns True if it was ALREADY processed
+    (duplicate/retry → caller should skip), False if this is the first time.
+    """
+    if not event_id:
+        return False
+    conn = sqlite3.connect(DATABASE_PATH)
+    try:
+        conn.execute(
+            "INSERT INTO stripe_events (event_id, created_at) VALUES (?, ?)",
+            (event_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        )
+        conn.commit()
+        return False  # inserted now → first time seen
+    except sqlite3.IntegrityError:
+        return True   # already exists → duplicate
+    finally:
+        conn.close()
 
 
 def get_hotel_by_stripe_customer(customer_id: str):
@@ -867,11 +883,15 @@ def detect_request_category(message: str) -> str | None:
     """
     Returns the request category if the message looks like a service request,
     or None if it's regular conversation.
+
+    Matches on whole words (\\b boundaries, Unicode-aware) so short keywords like
+    "su" (water) don't falsely trigger inside unrelated words like "russia"/"busy".
     """
     msg = message.lower()
     for category, keywords in _REQUEST_KEYWORDS.items():
-        if any(kw in msg for kw in keywords):
-            return category
+        for kw in keywords:
+            if re.search(r"\b" + re.escape(kw) + r"\b", msg):
+                return category
     return None
 
 

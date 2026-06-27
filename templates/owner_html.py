@@ -171,6 +171,11 @@ def get_owner_dashboard_html(owner: dict, hotels: list) -> str:
 </div>
 
 <script>
+function esc(t) {{
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(String(t == null ? '' : t)));
+  return d.innerHTML;
+}}
 const PLAN_CLASS = {{
   trial: 'plan-trial', basic: 'plan-basic', pro: 'plan-pro', enterprise: 'plan-enterprise'
 }};
@@ -213,8 +218,8 @@ async function loadHotels() {{
       : '';
     return `
     <div class="hotel-card">
-      <div class="hotel-name">${{h.name}}${{unreadBadge}}</div>
-      <div class="hotel-slug">${{h.slug}}</div>
+      <div class="hotel-name">${{esc(h.name)}}${{unreadBadge}}</div>
+      <div class="hotel-slug">${{esc(h.slug)}}</div>
       <span class="plan-badge ${{planClass}}">${{planLabel}}</span>
       <div class="hotel-stats">
         <div class="hs">

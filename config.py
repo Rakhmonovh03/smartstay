@@ -12,11 +12,6 @@ GUEST_TOKEN_SECRET = os.getenv("GUEST_TOKEN_SECRET") or ANTHROPIC_API_KEY or "sm
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
-_manager_pw = os.getenv("MANAGER_PASSWORD")
-if not _manager_pw:
-    raise RuntimeError("MANAGER_PASSWORD not set. Add it to .env before starting the app.")
-MANAGER_PASSWORD = _manager_pw
-
 _admin_pw = os.getenv("ADMIN_PASSWORD")
 if not _admin_pw:
     raise RuntimeError("ADMIN_PASSWORD not set. Add it to .env before starting the app.")

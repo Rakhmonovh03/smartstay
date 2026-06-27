@@ -1,4 +1,6 @@
 def get_chat_html(hotel_name="SmartStay AI", hotel_slug="", default_lang="en"):
+    import html as _html
+    hotel_name = _html.escape(hotel_name or "SmartStay AI")  # hotel-controlled → escape
     return f"""
 <!DOCTYPE html>
 <html>
@@ -285,6 +287,13 @@ def get_chat_html(hotel_name="SmartStay AI", hotel_slug="", default_lang="en"):
         </div>
         <div class="chat-header">
             <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">☀️ Light</button>
+            <select id="langSel" onchange="setLang(this.value)"
+                style="position:absolute;top:14px;left:14px;background:rgba(0,0,0,0.25);color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:8px;padding:4px 6px;font-size:12px;outline:none;cursor:pointer">
+                <option value="en">🇬🇧 EN</option>
+                <option value="ru">🇷🇺 RU</option>
+                <option value="tr">🇹🇷 TR</option>
+                <option value="uz">🇺🇿 UZ</option>
+            </select>
             <div class="header-avatar">🏨</div>
             <h2>{hotel_name}</h2>
             <p><span class="status-dot"></span><span id="chatStatusLine">Concierge • AI Assistant</span></p>
@@ -315,7 +324,7 @@ def get_chat_html(hotel_name="SmartStay AI", hotel_slug="", default_lang="en"):
         </div>
     </div>
     <script>
-        const PAGE_LANG = '{default_lang}';
+        const HOTEL_LANG = '{default_lang}';
 
         const CHAT_I18N = {{
             en: {{
@@ -468,9 +477,31 @@ def get_chat_html(hotel_name="SmartStay AI", hotel_slug="", default_lang="en"):
             }},
         }};
 
-        function _L() {{ return CHAT_I18N[PAGE_LANG] || CHAT_I18N.en; }}
+        // Pick the UI language: saved guest choice → hotel's setting (if we have a
+        // dictionary for it) → guest's browser language → English. This keeps the
+        // interface in the guest's language instead of defaulting to English when
+        // the hotel is set to "auto" or to a language we don't have UI strings for.
+        function _pickLang() {{
+            const saved = localStorage.getItem('ss_chat_lang');
+            if (saved && CHAT_I18N[saved]) return saved;
+            if (CHAT_I18N[HOTEL_LANG]) return HOTEL_LANG;
+            const nav = (navigator.language || 'en').slice(0, 2);
+            if (CHAT_I18N[nav]) return nav;
+            return 'en';
+        }}
+        let CUR_LANG = _pickLang();
+        function _L() {{ return CHAT_I18N[CUR_LANG] || CHAT_I18N.en; }}
+
+        function setLang(code) {{
+            if (!CHAT_I18N[code]) return;
+            CUR_LANG = code;
+            try {{ localStorage.setItem('ss_chat_lang', code); }} catch(e) {{}}
+            applyChatLang();
+        }}
 
         function applyChatLang() {{
+            const sel = document.getElementById('langSel');
+            if (sel) sel.value = CUR_LANG;
             const L = _L();
             const set = (id, val) => {{ const e = document.getElementById(id); if (e) e.textContent = val; }};
             set('installBarText', L.installBar);
@@ -674,11 +705,14 @@ def get_chat_html(hotel_name="SmartStay AI", hotel_slug="", default_lang="en"):
                 const decoder = new TextDecoder();
                 let fullText = '';
                 let first = true;
+                let buffer = '';   // holds a partial line across chunk boundaries
 
                 while (true) {{
                     const {{done, value}} = await reader.read();
                     if (done) break;
-                    const lines = decoder.decode(value).split('\\n');
+                    buffer += decoder.decode(value, {{stream: true}});
+                    const lines = buffer.split('\\n');
+                    buffer = lines.pop();   // keep the last (possibly incomplete) line
                     for (const line of lines) {{
                         if (!line.startsWith('data: ')) continue;
                         const payload = line.slice(6);
@@ -700,9 +734,13 @@ def get_chat_html(hotel_name="SmartStay AI", hotel_slug="", default_lang="en"):
                     }}
                 }}
 
-                messages.push({{role: 'assistant', content: fullText}});
-                wrap.appendChild(makeRating());
-                saveHistory();
+                // Only record a real reply — don't push an empty assistant turn
+                // (which would be sent back to the model on the next message).
+                if (fullText) {{
+                    messages.push({{role: 'assistant', content: fullText}});
+                    wrap.appendChild(makeRating());
+                    saveHistory();
+                }}
             }} catch(e) {{
                 botMsg.textContent = _L().connError;
             }}
@@ -796,7 +834,7 @@ def get_chat_html(hotel_name="SmartStay AI", hotel_slug="", default_lang="en"):
 
         // ===== STAFF MESSAGE POLLING =====
         async function pollStaffMessages() {{
-            if (!slug || !lastMsgId) return;
+            if (!slug) return;  // poll even when lastMsgId is 0 (since_id=0 → fetch from start)
             try {{
                 const res = await fetch('/api/hotel/' + slug + '/room/' + room + '/new-messages?since_id=' + lastMsgId);
                 const msgs = await res.json();
@@ -847,7 +885,8 @@ def get_chat_html(hotel_name="SmartStay AI", hotel_slug="", default_lang="en"):
                 const container = document.getElementById('messages');
                 const card = document.createElement('div');
                 card.className = 'review-card';
-                const hiName = data.name ? data.name + ', ' + L.reviewHi : L.reviewHi;
+                const escName = (data.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const hiName = escName ? escName + ', ' + L.reviewHi : L.reviewHi;
                 const daySub = data.days === 1 ? L.reviewSub1 : L.reviewSubN.replace('{{n}}', data.days);
                 card.innerHTML = '<div class="review-card-title">' + L.reviewTitle + '</div>' +
                     '<div class="review-card-sub">' + hiName + ' ' + daySub + '</div>';

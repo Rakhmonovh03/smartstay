@@ -1,4 +1,7 @@
 def get_widget_html(hotel_name="SmartStay", hotel_slug="", ai_name="AI Asistan"):
+    import html as _html
+    hotel_name = _html.escape(hotel_name or "SmartStay")   # hotel-controlled → escape
+    ai_name = _html.escape(ai_name or "AI Asistan")
     return f"""<!DOCTYPE html>
 <html>
 <head>
@@ -184,10 +187,14 @@ def get_widget_html(hotel_name="SmartStay", hotel_slug="", ai_name="AI Asistan")
       const reader = res.body.getReader();
       const dec = new TextDecoder();
       let full = ''; let first = true;
+      let buf = '';   // holds a partial line across chunk boundaries
       while (true) {{
         const {{done, value}} = await reader.read();
         if (done) break;
-        for (const line of dec.decode(value).split('\\n')) {{
+        buf += dec.decode(value, {{stream: true}});
+        const lines = buf.split('\\n');
+        buf = lines.pop();   // keep the last (possibly incomplete) line
+        for (const line of lines) {{
           if (!line.startsWith('data: ')) continue;
           try {{
             const d = JSON.parse(line.slice(6));
@@ -196,7 +203,7 @@ def get_widget_html(hotel_name="SmartStay", hotel_slug="", ai_name="AI Asistan")
           }} catch(e) {{}}
         }}
       }}
-      history.push({{role:'assistant', content:full}});
+      if (full) history.push({{role:'assistant', content:full}});
     }} catch(e) {{ bub.textContent='⚠️ Ошибка соединения'; }}
     streaming = false;
     inp.disabled = false;
@@ -205,7 +212,7 @@ def get_widget_html(hotel_name="SmartStay", hotel_slug="", ai_name="AI Asistan")
 
   // Poll for staff replies
   async function poll() {{
-    if (!slug || !lastId) return;
+    if (!slug) return;  // poll even when lastId is 0 (since_id=0 → fetch from start)
     try {{
       const r = await fetch('/api/hotel/'+slug+'/room/'+room+'/new-messages?since_id='+lastId);
       const msgs = await r.json();

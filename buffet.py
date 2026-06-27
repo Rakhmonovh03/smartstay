@@ -97,7 +97,12 @@ def analyze_buffet_photo(image_base64: str, media_type: str = "image/jpeg") -> d
 
     # Нормализуем статус на случай если Claude вернул не то слово
     for d in result.get("dishes", []):
-        pct = int(d.get("fill_percent", 0))
+        # fill_percent may arrive as 75, "75", "75%", or garbage — parse defensively.
+        raw = str(d.get("fill_percent", 0))
+        digits = "".join(ch for ch in raw if ch.isdigit())
+        pct = int(digits) if digits else 0
+        pct = max(0, min(pct, 100))
+        d["fill_percent"] = pct
         if pct <= 20:
             d["status"] = "empty"
         elif pct <= 50:

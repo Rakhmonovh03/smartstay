@@ -176,7 +176,7 @@ REGISTER_HTML = """<!DOCTYPE html>
                     <button class="lang-btn" onclick="setLang('uz')">UZ</button>
                 </div>
             </div>
-            <div class="sub" id="regSub">Register your hotel — ready in 3 minutes</div>
+            <div class="sub" id="sub">Register your hotel — ready in 3 minutes</div>
 
             <div class="section-title" id="secHotel">Hotel Info</div>
             <div class="field">
