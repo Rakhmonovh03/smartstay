@@ -261,7 +261,7 @@ REGISTER_HTML = """<!DOCTYPE html>
                 secHotel:'Hotel Info', lblName:'HOTEL NAME', lblSlug:'URL ID (SLUG)', hintSlug:'Lowercase letters and hyphens only',
                 lblPwd:'MANAGER PASSWORD', lblInfo:'HOTEL INFORMATION', hintInfo:'The more detail you provide, the better the AI responds',
                 secRooms:'Room Configuration', lblCount:'ROOM COUNT', hintCount:'Total number of rooms', lblStart:'FIRST ROOM NUMBER', hintStart:'e.g. 101 or 1',
-                secTg:'Telegram Notifications (Optional)', hintTgToken:'Get from @BotFather', hintTgChat:'Get from @userinfobot',
+                secTg:'Telegram Notifications (Optional)', hintTgToken:'Get from @BotFather', hintTgChat:'Get from @userinfobot', phInfo:'Hotel information...', phNewPassword:'New password',
                 secInvite:'Invite Code', lblInvite:'INVITE CODE', hintInvite:'Code provided by SmartStay team',
                 registerBtn:'Register Hotel →', errRequired:'❌ Please fill in all required fields',
                 haveAccount:'Already have an account?', loginLink:'Login',
@@ -273,7 +273,7 @@ REGISTER_HTML = """<!DOCTYPE html>
                 secHotel:'Данные отеля', lblName:'НАЗВАНИЕ ОТЕЛЯ', lblSlug:'URL (SLUG)', hintSlug:'Только строчные буквы и дефисы',
                 lblPwd:'ПАРОЛЬ МЕНЕДЖЕРА', lblInfo:'ИНФОРМАЦИЯ ОБ ОТЕЛЕ', hintInfo:'Чем подробнее, тем лучше AI отвечает',
                 secRooms:'Конфигурация номеров', lblCount:'КОЛИЧЕСТВО НОМЕРОВ', hintCount:'Общее число номеров', lblStart:'ПЕРВЫЙ НОМЕР КОМНАТЫ', hintStart:'Напр. 101 или 1',
-                secTg:'Уведомления Telegram (необязательно)', hintTgToken:'Получить у @BotFather', hintTgChat:'Получить у @userinfobot',
+                secTg:'Уведомления Telegram (необязательно)', hintTgToken:'Получить у @BotFather', hintTgChat:'Получить у @userinfobot', phInfo:'Информация об отеле...', phNewPassword:'Новый пароль',
                 secInvite:'Инвайт-код', lblInvite:'ИНВАЙТ-КОД', hintInvite:'Код от команды SmartStay',
                 registerBtn:'Зарегистрировать отель →', errRequired:'❌ Пожалуйста, заполните все обязательные поля',
                 haveAccount:'Уже есть аккаунт?', loginLink:'Войти',
@@ -285,7 +285,7 @@ REGISTER_HTML = """<!DOCTYPE html>
                 secHotel:'Otel Bilgileri', lblName:'OTELİN ADI', lblSlug:'URL KISALTMASI (SLUG)', hintSlug:'Sadece küçük harf ve tire kullanın',
                 lblPwd:'YÖNETİCİ ŞİFRESİ', lblInfo:'OTEL BİLGİLERİ', hintInfo:'Ne kadar detaylı olursa AI o kadar iyi yanıt verir',
                 secRooms:'Oda Yapılandırması', lblCount:'ODA SAYISI', hintCount:'Toplam oda adedi', lblStart:'İLK ODA NUMARASI', hintStart:'Örn: 101 veya 1',
-                secTg:'Telegram Bildirimleri (İsteğe Bağlı)', hintTgToken:"@BotFather'dan alın", hintTgChat:"@userinfobot'tan alın",
+                secTg:'Telegram Bildirimleri (İsteğe Bağlı)', hintTgToken:"@BotFather'dan alın", hintTgChat:"@userinfobot'tan alın", phInfo:'Otel bilgileri...', phNewPassword:'Yeni şifre',
                 secInvite:'Davet Kodu', lblInvite:'DAVET KODU', hintInvite:'SmartStay ekibinden aldığınız kod',
                 registerBtn:'Oteli Kaydet →', errRequired:'❌ Lütfen zorunlu alanları doldurun',
                 haveAccount:'Hesabınız var mı?', loginLink:'Giriş Yap',
@@ -297,7 +297,7 @@ REGISTER_HTML = """<!DOCTYPE html>
                 secHotel:"Mehmonxona ma'lumotlari", lblName:'MEHMONXONA NOMI', lblSlug:'URL ID (SLUG)', hintSlug:"Faqat kichik harflar va defislar",
                 lblPwd:'MENEJER PAROLI', lblInfo:"MEHMONXONA HAQIDA MA'LUMOT", hintInfo:"Qancha batafsil bo'lsa, AI shuncha yaxshi javob beradi",
                 secRooms:'Xonalar konfiguratsiyasi', lblCount:'XONALAR SONI', hintCount:'Jami xonalar soni', lblStart:'BIRINCHI XONA RAQAMI', hintStart:'Masalan: 101 yoki 1',
-                secTg:"Telegram bildirishnomalar (ixtiyoriy)", hintTgToken:"@BotFather dan oling", hintTgChat:"@userinfobot dan oling",
+                secTg:"Telegram bildirishnomalar (ixtiyoriy)", hintTgToken:"@BotFather dan oling", hintTgChat:"@userinfobot dan oling", phInfo:'Mehmonxona ma\'lumotlari...', phNewPassword:'Yangi parol',
                 secInvite:'Taklif kodi', lblInvite:'TAKLIF KODI', hintInvite:'SmartStay jamoasidan olingan kod',
                 registerBtn:"Mehmonxonani ro'yxatdan o'tkazish →", errRequired:"❌ Iltimos, barcha majburiy maydonlarni to'ldiring",
                 haveAccount:"Hisobingiz bormi?", loginLink:'Kirish',
@@ -448,11 +448,11 @@ EDIT_HTML = """
         </div>
         <div class="field">
             <label id="editLblInfo">OTEL BİLGİLERİ</label>
-            <textarea id="info" placeholder="Otel bilgileri..."></textarea>
+            <textarea id="info" data-i18n-ph="phInfo" placeholder="Otel bilgileri..."></textarea>
         </div>
         <div class="field">
             <label id="editLblPwd">YENİ ŞİFRE (değiştirmek istemiyorsanız boş bırakın)</label>
-            <input type="password" id="password" placeholder="Yeni şifre">
+            <input type="password" id="password" data-i18n-ph="phNewPassword" placeholder="Yeni şifre">
         </div>
 
         <div class="section-title" id="editSecTg">Telegram Bildirimleri</div>
@@ -460,12 +460,12 @@ EDIT_HTML = """
             <div class="field">
                 <label>BOT TOKEN</label>
                 <input type="text" id="tg_token" placeholder="7xxx:AAF...">
-                <div class="hint">@BotFather'dan alın</div>
+                <div class="hint" data-i18n="hintTgToken">@BotFather'dan alın</div>
             </div>
             <div class="field">
                 <label>CHAT ID</label>
                 <input type="text" id="tg_chat" placeholder="123456789">
-                <div class="hint">@userinfobot'tan alın</div>
+                <div class="hint" data-i18n="hintTgChat">@userinfobot'tan alın</div>
             </div>
         </div>
 
@@ -893,6 +893,14 @@ EDIT_HTML = """
             Object.keys(L).forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.textContent = L[id];
+            });
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const k = el.getAttribute('data-i18n');
+                if (L[k]) el.textContent = L[k];
+            });
+            document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+                const k = el.getAttribute('data-i18n-ph');
+                if (L[k]) el.placeholder = L[k];
             });
             const dashBtn = document.getElementById('dashBtn');
             if (dashBtn) dashBtn.textContent = (lang === 'en' ? '📊 Back to Dashboard' : lang === 'ru' ? '📊 На панель' : lang === 'uz' ? '📊 Panelga' : '📊 Panele Git');

@@ -716,7 +716,7 @@ DASHBOARD_HTML = """
                 <div style="flex:1">
                     <div style="font-size:11px;color:var(--text3);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Misafir Check-in Linki</div>
                     <div class="checkin-link-text" id="checkinLinkText"></div>
-                    <div style="font-size:11px;color:var(--text3);margin-top:6px">📱 Misafir bu QR'ı okutarak check-in yapabilir</div>
+                    <div style="font-size:11px;color:var(--text3);margin-top:6px" data-i18n="checkinQrHint">📱 Misafir bu QR'ı okutarak check-in yapabilir</div>
                 </div>
                 <button class="btn btn-gold btn-sm" onclick="copyCheckinLink()">📋 Kopyala</button>
             </div>
@@ -736,8 +736,8 @@ DASHBOARD_HTML = """
         <div id="calendarView" style="display:none">
             <div class="page-header" style="margin-bottom:20px">
                 <div>
-                    <h2 style="font-size:20px;font-weight:700;margin:0">📅 Doluluk Takvimi</h2>
-                    <p style="color:var(--text3);font-size:13px;margin:4px 0 0">Oda bazında check-in / check-out planı</p>
+                    <h2 style="font-size:20px;font-weight:700;margin:0" data-i18n="calTitle">📅 Doluluk Takvimi</h2>
+                    <p style="color:var(--text3);font-size:13px;margin:4px 0 0" data-i18n="calSub">Oda bazında check-in / check-out planı</p>
                 </div>
                 <div style="display:flex;gap:12px;align-items:center;font-size:12px;color:var(--text3)">
                     <span><span style="display:inline-block;width:12px;height:12px;background:rgba(60,180,100,0.3);border-radius:3px;vertical-align:middle;margin-right:4px"></span>Check-in</span>
@@ -759,7 +759,7 @@ DASHBOARD_HTML = """
         <!-- MANUAL REQUEST MODAL -->
         <div class="req-modal-overlay" id="reqModalOverlay" onclick="if(event.target===this)closeReqModal()">
             <div class="req-modal">
-                <h3>➕ Yeni Talep Ekle</h3>
+                <h3 data-i18n="reqAddTitle">➕ Yeni Talep Ekle</h3>
                 <label>ODA NUMARASI</label>
                 <input type="text" id="reqRoom" placeholder="101">
                 <label>MİSAFİR ADI (isteğe bağlı)</label>
@@ -784,16 +784,16 @@ DASHBOARD_HTML = """
         <div id="requestsView" style="display:none">
             <div class="page-header" style="margin-bottom:20px">
                 <div>
-                    <h2 style="font-size:20px;font-weight:700;margin:0">📋 Misafir Talepleri</h2>
-                    <p style="color:var(--text3);font-size:13px;margin:4px 0 0">Oda servisi, bakım ve temizlik talepleri</p>
+                    <h2 style="font-size:20px;font-weight:700;margin:0" data-i18n="reqTitle">📋 Misafir Talepleri</h2>
+                    <p style="color:var(--text3);font-size:13px;margin:4px 0 0" data-i18n="reqSub">Oda servisi, bakım ve temizlik talepleri</p>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center">
-                    <button class="btn btn-gold btn-sm" onclick="openReqModal()">➕ Yeni Talep</button>
+                    <button class="btn btn-gold btn-sm" onclick="openReqModal()" data-i18n="reqNewBtn">➕ Yeni Talep</button>
                     <select id="reqStatusFilter" onchange="loadRequests()" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:inherit;font-size:13px;cursor:pointer">
-                        <option value="">Tümü</option>
-                        <option value="pending">⏳ Bekliyor</option>
-                        <option value="in_progress">🔄 İşlemde</option>
-                        <option value="resolved">✅ Çözüldü</option>
+                        <option value="" data-i18n="gfAll">Tümü</option>
+                        <option value="pending" data-i18n="gfPending">⏳ Bekliyor</option>
+                        <option value="in_progress" data-i18n="reqStProgress">🔄 İşlemde</option>
+                        <option value="resolved" data-i18n="reqStResolved">✅ Çözüldü</option>
                     </select>
                     <button class="btn btn-outline btn-sm" data-i18n="btnRefresh" onclick="loadRequests()">↻ Yenile</button>
                 </div>
@@ -964,21 +964,21 @@ DASHBOARD_HTML = """
 
             <!-- Channel selector -->
             <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-                <button class="filter active" id="scTabGeneral"   onclick="switchScChannel('general')">🏠 Общий</button>
-                <button class="filter"        id="scTabReception" onclick="switchScChannel('reception')">🛎️ Рецепция</button>
-                <button class="filter"        id="scTabHousekeeping" onclick="switchScChannel('housekeeping')">🧹 Горничная</button>
-                <button class="filter"        id="scTabMaintenance"  onclick="switchScChannel('maintenance')">🔧 Техника</button>
+                <button class="filter active" id="scTabGeneral" data-i18n="scGeneral" onclick="switchScChannel('general')">🏠 Общий</button>
+                <button class="filter" id="scTabReception" data-i18n="scReception" onclick="switchScChannel('reception')">🛎️ Рецепция</button>
+                <button class="filter" id="scTabHousekeeping" data-i18n="scHousekeeping" onclick="switchScChannel('housekeeping')">🧹 Горничная</button>
+                <button class="filter" id="scTabMaintenance" data-i18n="scMaintenance" onclick="switchScChannel('maintenance')">🔧 Техника</button>
             </div>
 
             <!-- Chat box -->
             <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;display:flex;flex-direction:column;height:520px;overflow:hidden">
                 <!-- Messages -->
                 <div id="scMessages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px">
-                    <div style="text-align:center;color:var(--text3);font-size:13px;padding:40px 0">Загрузка...</div>
+                    <div style="text-align:center;color:var(--text3);font-size:13px;padding:40px 0" data-i18n="scLoading">Загрузка...</div>
                 </div>
                 <!-- Input -->
                 <div style="border-top:1px solid var(--border);padding:12px 16px;display:flex;gap:10px;flex-shrink:0;background:var(--bg2)">
-                    <input type="text" id="scInput" placeholder="Сообщение для команды..."
+                    <input type="text" id="scInput" data-i18n-ph="scInputPh" placeholder="Сообщение для команды..."
                            style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:10px 16px;color:var(--text);font-size:13px;outline:none;font-family:inherit"
                            onkeypress="if(event.key==='Enter')scSend()">
                     <button class="btn btn-gold" onclick="scSend()" style="border-radius:20px;padding:9px 20px">➤</button>
@@ -1057,7 +1057,7 @@ DASHBOARD_HTML = """
         <!-- ROOMS VIEW -->
         <div id="roomsView" style="display:none">
             <div class="filter-bar">
-                <input class="search-input" id="roomSearchGroup" placeholder="🔍 Oda ara..." oninput="renderRoomsView()" style="width:200px">
+                <input class="search-input" id="roomSearchGroup" data-i18n-ph="roomSearchPh" placeholder="🔍 Oda ara..." oninput="renderRoomsView()" style="width:200px">
             </div>
             <div id="roomsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px"></div>
         </div>
@@ -1165,7 +1165,7 @@ DASHBOARD_HTML = """
 
             <div class="modal-body" id="modalBody" style="flex:1;overflow-y:auto"></div>
             <div class="modal-footer" id="modalFooter" style="display:none">
-                <textarea class="reply-input" id="replyInput" placeholder="Misafire yanıt yaz..." rows="1"
+                <textarea class="reply-input" id="replyInput" data-i18n-ph="replyPh" placeholder="Misafire yanıt yaz..." rows="1"
                     onkeypress="if(event.key==='Enter'&&!event.shiftKey){{event.preventDefault();sendReply();}}"></textarea>
                 <button class="reply-btn" onclick="sendReply()">Gönder ➤</button>
             </div>
@@ -1304,7 +1304,7 @@ DASHBOARD_HTML = """
             const page = data.slice(start, start + PAGE_SIZE);
 
             if (total === 0) {{
-                tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">💬</div><p>Henüz mesaj yok</p></div></td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">💬</div><p>${{DT('msgEmpty')}}</p></div></td></tr>`;
                 document.getElementById('pagination').innerHTML = '';
                 return;
             }}
@@ -1439,7 +1439,7 @@ DASHBOARD_HTML = """
                 const maxDist = Math.max(...Object.values(dist), 1);
                 const totalRatings = Object.values(dist).reduce((a, b) => a + b, 0);
                 if (totalRatings === 0) {{
-                    distEl.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0">Henüz değerlendirme yok</div>';
+                    distEl.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0">' + DT('ratingsEmpty') + '</div>';
                 }} else {{
                     distEl.innerHTML = [5, 4, 3, 2, 1].map(star => {{
                         const cnt = dist[star] || 0;
@@ -1552,7 +1552,7 @@ DASHBOARD_HTML = """
                 updateRequestsBadge(data.pending_count || 0);
 
                 if (!data.requests || !data.requests.length) {{
-                    tbody.innerHTML = '<tr><td colspan="7" class="req-empty">📭 Talep yok</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="req-empty">' + DT('reqEmpty') + '</td></tr>';
                     return;
                 }}
 
@@ -1698,7 +1698,7 @@ DASHBOARD_HTML = """
 
             if (!rooms.length) {{
                 document.getElementById('calendarGrid').innerHTML =
-                    '<div style="text-align:center;padding:60px;color:var(--text3)">📭 Henüz misafir kaydı yok</div>';
+                    '<div style="text-align:center;padding:60px;color:var(--text3)">' + DT('calEmpty') + '</div>';
                 return;
             }}
 
@@ -1977,13 +1977,13 @@ DASHBOARD_HTML = """
 
         async function loadScHistory() {{
             const box = document.getElementById('scMessages');
-            box.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:40px 0">Загрузка...</div>';
+            box.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:40px 0">' + DT('scLoading') + '</div>';
             try {{
                 const r = await fetch('/api/hotel/' + slug + '/staff-chat/' + _scChannel, {{credentials:'include'}});
                 const data = await r.json();
                 const msgs = data.messages || [];
                 if (!msgs.length) {{
-                    box.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:40px 0">Сообщений нет. Будьте первым!</div>';
+                    box.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:40px 0">' + DT('scEmpty') + '</div>';
                     _scLastId = 0;
                     return;
                 }}
@@ -2277,7 +2277,7 @@ DASHBOARD_HTML = """
                 const ratings = await apiJson(apiBase + '/ratings');
                 const list = document.getElementById('ratingsList');
                 if (!ratings.length) {{
-                    list.innerHTML = '<div class="guests-empty">📭 Henüz değerlendirme yok</div>';
+                    list.innerHTML = '<div class="guests-empty">' + DT('ratingsEmpty') + '</div>';
                     document.getElementById('ratingAvgCard').style.display = 'none';
                     return;
                 }}
@@ -2473,7 +2473,7 @@ DASHBOARD_HTML = """
 
             const grid = document.getElementById('roomsGrid');
             if (!rooms.length) {{
-                grid.innerHTML = '<div class="empty-state"><div class="icon">🚪</div><p>Oda yok</p></div>';
+                grid.innerHTML = '<div class="empty-state"><div class="icon">🚪</div><p>' + DT('roomsEmpty') + '</p></div>';
                 return;
             }}
             grid.innerHTML = '';
@@ -2579,7 +2579,7 @@ DASHBOARD_HTML = """
             const body = document.getElementById('modalBody');
             body.innerHTML = '';
             if (!msgs.length) {{
-                body.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>Henüz mesaj yok</p></div>';
+                body.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>' + DT('msgEmpty') + '</p></div>';
                 return;
             }}
             if (msgs.length) _modalLastMsgId = msgs[msgs.length - 1].id;
@@ -3100,11 +3100,11 @@ DASHBOARD_HTML = """
                 badge.textContent = plan;
                 badge.className = 'plan-badge plan-' + d.plan;
                 if (d.unlimited) {{
-                    text.textContent = d.used + ' mesaj (limitsiz)';
+                    text.textContent = d.used + ' ' + DT('msgWord') + ' (∞)';
                     fill.style.width = '100%';
                     fill.classList.remove('warn');
                 }} else {{
-                    text.textContent = d.used + ' / ' + d.limit + ' mesaj (' + d.percent + '%)';
+                    text.textContent = d.used + ' / ' + d.limit + ' ' + DT('msgWord') + ' (' + d.percent + '%)';
                     fill.style.width = Math.min(d.percent, 100) + '%';
                     fill.classList.toggle('warn', d.percent >= 85);
                 }}
@@ -3162,7 +3162,14 @@ DASHBOARD_HTML = """
                 qrDownloadBtn:'⬇️ Download', qrFloorTitle:'🏢 Floor Room QR Generator',
                 qrFloorLabel:'FLOOR NUMBER', qrRoomCountLabel:'ROOMS ON THIS FLOOR',
                 qrFloorBtn:'Generate Floor', qrClearBtn:'Clear All',
-                qrFloorHint:'e.g. Floor 2 + 10 rooms → rooms 201–210'
+                qrFloorHint:'e.g. Floor 2 + 10 rooms → rooms 201–210',
+                calTitle:'📅 Occupancy Calendar', calSub:'Room-based check-in / check-out plan', calEmpty:'📭 No guest records yet',
+                roomSearchPh:'🔍 Search room...', roomsEmpty:'No rooms',
+                reqTitle:'📋 Guest Requests', reqSub:'Room service, maintenance and cleaning requests', reqNewBtn:'➕ New Request', reqAddTitle:'➕ Add New Request', reqEmpty:'📭 No requests',
+                msgEmpty:'No messages yet', ratingsEmpty:'📭 No reviews yet', replyPh:'Reply to guest...', msgWord:'msg', checkinQrHint:'📱 Guests scan this QR to check in',
+                scGeneral:'🏠 General', scReception:'🛎️ Reception', scHousekeeping:'🧹 Housekeeping', scMaintenance:'🔧 Maintenance',
+                scEmpty:'No messages. Be the first!', scInputPh:'Message to the team...', scLoading:'Loading...',
+                reqStProgress:'🔄 In progress', reqStResolved:'✅ Resolved'
             }},
             ru: {{
                 nt_all:'Все сообщения', nt_urgent:'Срочные', nt_guest:'Гость', nt_rooms:'Номера',
@@ -3206,7 +3213,14 @@ DASHBOARD_HTML = """
                 qrDownloadBtn:'⬇️ Скачать', qrFloorTitle:'🏢 Генератор QR по этажам',
                 qrFloorLabel:'НОМЕР ЭТАЖА', qrRoomCountLabel:'КОМНАТ НА ЭТАЖЕ',
                 qrFloorBtn:'Создать этаж', qrClearBtn:'Очистить всё',
-                qrFloorHint:'Напр. Этаж 2 + 10 комнат → комнаты 201–210'
+                qrFloorHint:'Напр. Этаж 2 + 10 комнат → комнаты 201–210',
+                calTitle:'📅 Календарь занятости', calSub:'План заезда/выезда по номерам', calEmpty:'📭 Пока нет записей о гостях',
+                roomSearchPh:'🔍 Поиск номера...', roomsEmpty:'Нет номеров',
+                reqTitle:'📋 Запросы гостей', reqSub:'Обслуживание номеров, ремонт и уборка', reqNewBtn:'➕ Новый запрос', reqAddTitle:'➕ Новый запрос', reqEmpty:'📭 Запросов нет',
+                msgEmpty:'Пока нет сообщений', ratingsEmpty:'📭 Пока нет отзывов', replyPh:'Ответ гостю...', msgWord:'сообщ.', checkinQrHint:'📱 Гость сканирует этот QR для заселения',
+                scGeneral:'🏠 Общий', scReception:'🛎️ Ресепшен', scHousekeeping:'🧹 Горничная', scMaintenance:'🔧 Техника',
+                scEmpty:'Сообщений нет. Будьте первым!', scInputPh:'Сообщение для команды...', scLoading:'Загрузка...',
+                reqStProgress:'🔄 В работе', reqStResolved:'✅ Решено'
             }},
             tr: {{
                 nt_all:'Tüm Mesajlar', nt_urgent:'Acil', nt_guest:'Misafir', nt_rooms:'Odalar',
@@ -3250,7 +3264,14 @@ DASHBOARD_HTML = """
                 qrDownloadBtn:'⬇️ İndir', qrFloorTitle:'🏢 Kat Bazlı QR Oluşturucu',
                 qrFloorLabel:'KAT NUMARASI', qrRoomCountLabel:'BU KATTAKİ ODA SAYISI',
                 qrFloorBtn:'Kat Oluştur', qrClearBtn:'Temizle',
-                qrFloorHint:"Örn: Kat 2 + 10 oda → odalar 201–210"
+                qrFloorHint:"Örn: Kat 2 + 10 oda → odalar 201–210",
+                calTitle:'📅 Doluluk Takvimi', calSub:'Oda bazında check-in / check-out planı', calEmpty:'📭 Henüz misafir kaydı yok',
+                roomSearchPh:'🔍 Oda ara...', roomsEmpty:'Oda yok',
+                reqTitle:'📋 Misafir Talepleri', reqSub:'Oda servisi, bakım ve temizlik talepleri', reqNewBtn:'➕ Yeni Talep', reqAddTitle:'➕ Yeni Talep Ekle', reqEmpty:'📭 Talep yok',
+                msgEmpty:'Henüz mesaj yok', ratingsEmpty:'📭 Henüz değerlendirme yok', replyPh:'Misafire yanıt yaz...', msgWord:'mesaj', checkinQrHint:'📱 Misafir bu QR’ı okutarak check-in yapabilir',
+                scGeneral:'🏠 Genel', scReception:'🛎️ Resepsiyon', scHousekeeping:'🧹 Temizlik', scMaintenance:'🔧 Teknik',
+                scEmpty:'Mesaj yok. İlk siz olun!', scInputPh:'Ekibe mesaj...', scLoading:'Yükleniyor...',
+                reqStProgress:'🔄 İşlemde', reqStResolved:'✅ Çözüldü'
             }},
             uz: {{
                 nt_all:"Barcha xabarlar", nt_urgent:"Shoshilinch", nt_guest:"Mehmon", nt_rooms:"Xonalar",
@@ -3294,12 +3315,22 @@ DASHBOARD_HTML = """
                 qrDownloadBtn:"⬇️ Yuklab olish", qrFloorTitle:"🏢 Qavat bo'yicha QR yaratuvchi",
                 qrFloorLabel:"QAVAT RAQAMI", qrRoomCountLabel:"BU QAVATDAGI XONALAR SONI",
                 qrFloorBtn:"Qavatni yaratish", qrClearBtn:"Hammasini tozalash",
-                qrFloorHint:"Masalan: 2-qavat + 10 xona → xonalar 201–210"
+                qrFloorHint:"Masalan: 2-qavat + 10 xona → xonalar 201–210",
+                calTitle:'📅 Bandlik taqvimi', calSub:'Xona bo‘yicha check-in / check-out rejasi', calEmpty:'📭 Hozircha mehmon yozuvi yo‘q',
+                roomSearchPh:'🔍 Xona qidirish...', roomsEmpty:'Xona yo‘q',
+                reqTitle:'📋 Mehmon so‘rovlari', reqSub:'Xona xizmati, ta’mirlash va tozalash so‘rovlari', reqNewBtn:'➕ Yangi so‘rov', reqAddTitle:'➕ Yangi so‘rov qo‘shish', reqEmpty:'📭 So‘rov yo‘q',
+                msgEmpty:'Hozircha xabar yo‘q', ratingsEmpty:'📭 Hozircha sharh yo‘q', replyPh:'Mehmonga javob...', msgWord:'xabar', checkinQrHint:'📱 Mehmon shu QR’ni skanerlab check-in qiladi',
+                scGeneral:'🏠 Umumiy', scReception:'🛎️ Resepshn', scHousekeeping:'🧹 Tozalash', scMaintenance:'🔧 Texnika',
+                scEmpty:'Xabar yo‘q. Birinchi bo‘ling!', scInputPh:'Jamoaga xabar...', scLoading:'Yuklanmoqda...',
+                reqStProgress:'🔄 Jarayonda', reqStResolved:'✅ Hal qilindi'
             }}
         }};
 
         let _dashLang = localStorage.getItem('ss_lang') || 'en';
         if (!DASH_I18N[_dashLang]) _dashLang = 'en';
+
+        // Helper for dynamically-built strings (empty states, etc.)
+        function DT(key) {{ return (DASH_I18N[_dashLang] || DASH_I18N.en)[key] || (DASH_I18N.en[key] || key); }}
 
         function applyDashLang() {{
             const L = DASH_I18N[_dashLang] || DASH_I18N.en;
@@ -3312,6 +3343,11 @@ DASHBOARD_HTML = """
             document.querySelectorAll('[data-i18n]').forEach(el => {{
                 const k = el.getAttribute('data-i18n');
                 if (L[k]) el.textContent = L[k];
+            }});
+            // Translate input placeholders tagged with data-i18n-ph.
+            document.querySelectorAll('[data-i18n-ph]').forEach(el => {{
+                const k = el.getAttribute('data-i18n-ph');
+                if (L[k]) el.placeholder = L[k];
             }});
             document.querySelectorAll('.lang-btn-dash').forEach(b => {{
                 b.classList.toggle('active', b.textContent === _dashLang.toUpperCase());

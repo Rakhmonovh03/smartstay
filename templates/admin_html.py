@@ -177,11 +177,15 @@ ADMIN_HTML = """
         <div style="background:#111;border:1px solid rgba(201,168,76,0.2);border-radius:12px;padding:20px;margin-bottom:24px">
             <div style="font-weight:700;font-size:15px;color:#C9A84C;margin-bottom:4px" data-i18n="promoTitle">🎬 Promo video (landing page)</div>
             <div style="font-size:12px;color:#666;margin-bottom:12px" data-i18n="promoHint">Paste a YouTube or MP4 link. It appears as “Watch video” on the homepage. Leave empty to hide.</div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
                 <input id="promoVideoInput" type="url" placeholder="https://youtube.com/watch?v=..."
                     style="flex:1;min-width:240px;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#eee;padding:10px 14px;font-size:14px;outline:none">
                 <button onclick="savePromoVideo()" data-i18n="promoSave" style="padding:10px 20px;background:#C9A84C;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">💾 Save</button>
+                <span style="color:#555;font-size:13px" data-i18n="promoOr">or</span>
+                <input type="file" id="promoVideoFile" accept="video/*" style="display:none" onchange="uploadPromoVideo()">
+                <button onclick="document.getElementById('promoVideoFile').click()" data-i18n="promoUpload" style="padding:10px 20px;background:#1a1a1a;color:#fff;border:1px solid #333;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px">⬆️ Upload file</button>
             </div>
+            <div id="promoUploadStatus" style="font-size:12px;color:#666;margin-top:10px"></div>
         </div>
 
         <div class="revenue-card">
@@ -267,7 +271,7 @@ ADMIN_HTML = """
                 assign:'Assign', fillFields:'Fill in all fields', selectHotelErr:'Select a hotel',
                 ownerCreated:'✅ Owner created!', hotelLinked:'✅ Hotel linked!', err:'Error',
                 deleteConfirm:'Delete hotel {n}?', deleteWarn:'All messages will also be deleted!',
-                promoTitle:'🎬 Promo video (landing page)', promoHint:'Paste a YouTube or MP4 link. It appears as “Watch video” on the homepage. Leave empty to hide.', promoSave:'💾 Save', promoSaved:'✅ Video saved!',
+                promoTitle:'🎬 Promo video (landing page)', promoHint:'Paste a YouTube/MP4 link, or upload a file. It appears as “Watch video” on the homepage. Leave empty to hide.', promoSave:'💾 Save', promoSaved:'✅ Video saved!', promoOr:'or', promoUpload:'⬆️ Upload file', promoUploading:'Uploading…',
             },
             ru: {
                 navHotels:'🏨 Все отели', navOwners:'👥 Владельцы', navAddHotel:'➕ Добавить отель', navLogout:'🚪 Выход',
@@ -287,7 +291,7 @@ ADMIN_HTML = """
                 assign:'Привязать', fillFields:'Заполните все поля', selectHotelErr:'Выберите отель',
                 ownerCreated:'✅ Владелец создан!', hotelLinked:'✅ Отель привязан!', err:'Ошибка',
                 deleteConfirm:'Удалить отель {n}?', deleteWarn:'Все сообщения тоже будут удалены!',
-                promoTitle:'🎬 Промо-видео (главная страница)', promoHint:'Вставь ссылку на YouTube или MP4. На главной появится кнопка «Смотреть видео». Пусто — кнопка скрыта.', promoSave:'💾 Сохранить', promoSaved:'✅ Видео сохранено!',
+                promoTitle:'🎬 Промо-видео (главная страница)', promoHint:'Вставь ссылку на YouTube/MP4 или загрузи файл. На главной появится кнопка «Смотреть видео». Пусто — кнопка скрыта.', promoSave:'💾 Сохранить', promoSaved:'✅ Видео сохранено!', promoOr:'или', promoUpload:'⬆️ Загрузить файл', promoUploading:'Загрузка…',
             },
             tr: {
                 navHotels:'🏨 Tüm Oteller', navOwners:'👥 Sahipler', navAddHotel:'➕ Otel Ekle', navLogout:'🚪 Çıkış',
@@ -307,7 +311,7 @@ ADMIN_HTML = """
                 assign:'Bağla', fillFields:'Tüm alanları doldurun', selectHotelErr:'Bir otel seçin',
                 ownerCreated:'✅ Sahip oluşturuldu!', hotelLinked:'✅ Otel bağlandı!', err:'Hata',
                 deleteConfirm:'{n} otelini silmek istediğinizden emin misiniz?', deleteWarn:'Tüm mesajlar da silinecek!',
-                promoTitle:'🎬 Tanıtım videosu (ana sayfa)', promoHint:'Bir YouTube veya MP4 linki yapıştırın. Ana sayfada “Videoyu izle” olarak görünür. Boş bırakırsanız gizlenir.', promoSave:'💾 Kaydet', promoSaved:'✅ Video kaydedildi!',
+                promoTitle:'🎬 Tanıtım videosu (ana sayfa)', promoHint:'Bir YouTube/MP4 linki yapıştırın veya dosya yükleyin. Ana sayfada “Videoyu izle” olarak görünür. Boş bırakırsanız gizlenir.', promoSave:'💾 Kaydet', promoSaved:'✅ Video kaydedildi!', promoOr:'veya', promoUpload:'⬆️ Dosya yükle', promoUploading:'Yükleniyor…',
             },
             uz: {
                 navHotels:'🏨 Barcha mehmonxonalar', navOwners:'👥 Egalar', navAddHotel:'➕ Mehmonxona qo‘shish', navLogout:'🚪 Chiqish',
@@ -327,7 +331,7 @@ ADMIN_HTML = """
                 assign:'Bog‘lash', fillFields:'Barcha maydonlarni to‘ldiring', selectHotelErr:'Mehmonxonani tanlang',
                 ownerCreated:'✅ Ega yaratildi!', hotelLinked:'✅ Mehmonxona bog‘landi!', err:'Xato',
                 deleteConfirm:'{n} mehmonxonasini o‘chirasizmi?', deleteWarn:'Barcha xabarlar ham o‘chiriladi!',
-                promoTitle:'🎬 Reklama videosi (bosh sahifa)', promoHint:'YouTube yoki MP4 havolasini joylang. Bosh sahifada “Videoni ko‘rish” bo‘lib chiqadi. Bo‘sh qoldirsangiz yashiriladi.', promoSave:'💾 Saqlash', promoSaved:'✅ Video saqlandi!',
+                promoTitle:'🎬 Reklama videosi (bosh sahifa)', promoHint:'YouTube/MP4 havolasini joylang yoki fayl yuklang. Bosh sahifada “Videoni ko‘rish” bo‘lib chiqadi. Bo‘sh qoldirsangiz yashiriladi.', promoSave:'💾 Saqlash', promoSaved:'✅ Video saqlandi!', promoOr:'yoki', promoUpload:'⬆️ Fayl yuklash', promoUploading:'Yuklanmoqda…',
             },
         };
         let _adminLang = localStorage.getItem('ss_lang');
@@ -451,6 +455,48 @@ ADMIN_HTML = """
                 if (d.ok) showToast(T('promoSaved'), 'green');
                 else showToast('❌ ' + (d.error || T('err')), 'red');
             } catch(e) { showToast('❌ ' + T('err'), 'red'); }
+        }
+
+        function uploadPromoVideo() {
+            const fileInput = document.getElementById('promoVideoFile');
+            const file = fileInput.files[0];
+            if (!file) return;
+            const status = document.getElementById('promoUploadStatus');
+            const fd = new FormData();
+            fd.append('video', file);
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/admin/upload-video', true);
+            xhr.withCredentials = true;
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const pct = Math.round((e.loaded / e.total) * 100);
+                    status.style.color = '#C9A84C';
+                    status.textContent = T('promoUploading') + ' ' + pct + '%';
+                }
+            };
+            xhr.onload = function() {
+                try {
+                    const d = JSON.parse(xhr.responseText);
+                    if (d.ok) {
+                        document.getElementById('promoVideoInput').value = d.promo_video;
+                        status.style.color = '#4CAF50';
+                        status.textContent = T('promoSaved');
+                        showToast(T('promoSaved'), 'green');
+                    } else {
+                        status.style.color = '#E05555';
+                        status.textContent = '❌ ' + (d.error || T('err'));
+                    }
+                } catch(e) {
+                    status.style.color = '#E05555';
+                    status.textContent = '❌ ' + T('err');
+                }
+                fileInput.value = '';
+            };
+            xhr.onerror = function() {
+                status.style.color = '#E05555';
+                status.textContent = '❌ ' + T('err');
+            };
+            xhr.send(fd);
         }
 
         async function changePlan(slug, selectEl) {

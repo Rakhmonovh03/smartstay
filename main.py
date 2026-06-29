@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, UploadFile, File
-from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse, Response, JSONResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse, Response, JSONResponse, FileResponse
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -173,6 +173,11 @@ async def send_email(hotel: dict, subject: str, body_html: str) -> bool:
 
 
 init_db()
+
+# Media folder for uploaded files (promo video). Placed next to the database so
+# that if the DB is on a Railway persistent Volume, uploads persist there too.
+MEDIA_DIR = os.path.join(os.path.dirname(os.path.abspath(DATABASE_PATH)) or ".", "media")
+os.makedirs(MEDIA_DIR, exist_ok=True)
 
 # ===== PYDANTIC MODELS =====
 class ChatRequest(BaseModel):
@@ -2197,6 +2202,54 @@ def api_admin_set_settings(data: SettingsUpdate, request: Request):
         return JSONResponse({"error": "URL http:// veya https:// ile başlamalı"}, status_code=400)
     set_setting("promo_video", url)
     return {"ok": True, "promo_video": url}
+
+@app.post("/api/admin/upload-video")
+async def api_admin_upload_video(request: Request, video: UploadFile = File(...)):
+    """Admin uploads a video file; saved to MEDIA_DIR and set as the promo video."""
+    if not _is_admin(request):
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+    if not (video.content_type or "").startswith("video/"):
+        return JSONResponse({"error": "Sadece video dosyası yüklenebilir / Только видеофайл"}, status_code=400)
+    ext = os.path.splitext(video.filename or "")[1].lower()
+    if ext not in (".mp4", ".webm", ".mov", ".m4v", ".ogg"):
+        ext = ".mp4"
+    # Remove any previous promo file (we keep only one)
+    for f in os.listdir(MEDIA_DIR):
+        if f.startswith("promo_video"):
+            try:
+                os.remove(os.path.join(MEDIA_DIR, f))
+            except OSError:
+                pass
+    dest = os.path.join(MEDIA_DIR, "promo_video" + ext)
+    MAX = 100 * 1024 * 1024  # 100 MB
+    size = 0
+    try:
+        with open(dest, "wb") as out:
+            while True:
+                chunk = await video.read(1024 * 1024)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > MAX:
+                    out.close()
+                    os.remove(dest)
+                    return JSONResponse({"error": "Dosya çok büyük (max 100MB)"}, status_code=413)
+                out.write(chunk)
+    except Exception as e:
+        print(f"[upload-video] {e}")
+        return JSONResponse({"error": "Yükleme hatası"}, status_code=500)
+    url = "/media/promo_video" + ext
+    set_setting("promo_video", url)
+    return {"ok": True, "promo_video": url}
+
+@app.get("/media/{name}")
+def serve_media(name: str):
+    """Serve an uploaded media file (only flat filenames, no path traversal)."""
+    safe = os.path.basename(name)
+    path = os.path.join(MEDIA_DIR, safe)
+    if not os.path.isfile(path):
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    return FileResponse(path)
 
 @app.get("/api/admin/hotels")
 def api_admin_hotels(request: Request):
