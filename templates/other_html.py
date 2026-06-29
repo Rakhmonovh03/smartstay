@@ -297,7 +297,7 @@ REGISTER_HTML = """<!DOCTYPE html>
                 secHotel:"Mehmonxona ma'lumotlari", lblName:'MEHMONXONA NOMI', lblSlug:'URL ID (SLUG)', hintSlug:"Faqat kichik harflar va defislar",
                 lblPwd:'MENEJER PAROLI', lblInfo:"MEHMONXONA HAQIDA MA'LUMOT", hintInfo:"Qancha batafsil bo'lsa, AI shuncha yaxshi javob beradi",
                 secRooms:'Xonalar konfiguratsiyasi', lblCount:'XONALAR SONI', hintCount:'Jami xonalar soni', lblStart:'BIRINCHI XONA RAQAMI', hintStart:'Masalan: 101 yoki 1',
-                secTg:"Telegram bildirishnomalar (ixtiyoriy)", hintTgToken:"@BotFather dan oling", hintTgChat:"@userinfobot dan oling", phInfo:'Mehmonxona ma\'lumotlari...', phNewPassword:'Yangi parol',
+                secTg:"Telegram bildirishnomalar (ixtiyoriy)", hintTgToken:"@BotFather dan oling", hintTgChat:"@userinfobot dan oling", phInfo:"Mehmonxona ma'lumotlari...", phNewPassword:'Yangi parol',
                 secInvite:'Taklif kodi', lblInvite:'TAKLIF KODI', hintInvite:'SmartStay jamoasidan olingan kod',
                 registerBtn:"Mehmonxonani ro'yxatdan o'tkazish →", errRequired:"❌ Iltimos, barcha majburiy maydonlarni to'ldiring",
                 haveAccount:"Hisobingiz bormi?", loginLink:'Kirish',
@@ -813,6 +813,7 @@ EDIT_HTML = """
                 editIntegDesc:'Add one line of code to your hotel website — a 🛎️ concierge button with popup chat appears.',
                 editCopyBtn:'📋 Copy code', editPreviewBtn:'👁️ Widget preview',
                 editSaveBtn:'💾 Save', success:'✅ Saved!',
+                hintTgToken:'Get from @BotFather', hintTgChat:'Get from @userinfobot', phInfo:'Hotel information...', phNewPassword:'New password',
             },
             ru: {
                 editBack:'← Назад', editSub:'Редактировать настройки отеля',
@@ -837,6 +838,7 @@ EDIT_HTML = """
                 editIntegDesc:'Вставьте одну строку кода на сайт отеля — появится кнопка-консьерж 🛎️ с всплывающим чатом.',
                 editCopyBtn:'📋 Скопировать код', editPreviewBtn:'👁️ Превью виджета',
                 editSaveBtn:'💾 Сохранить', success:'✅ Сохранено!',
+                hintTgToken:'Получить у @BotFather', hintTgChat:'Получить у @userinfobot', phInfo:'Информация об отеле...', phNewPassword:'Новый пароль',
             },
             tr: {
                 editBack:'← Panele Dön', editSub:'Otel ayarlarını düzenle',
@@ -861,6 +863,7 @@ EDIT_HTML = """
                 editIntegDesc:'Otel web sitenize bir satır kod ekleyin — 🛎️ konsiyerj düğmesi çıkar.',
                 editCopyBtn:'📋 Kodu kopyala', editPreviewBtn:'👁️ Widget önizleme',
                 editSaveBtn:'💾 Kaydet', success:'✅ Kaydedildi!',
+                hintTgToken:"@BotFather'dan alın", hintTgChat:"@userinfobot'tan alın", phInfo:'Otel bilgileri...', phNewPassword:'Yeni şifre',
             },
             uz: {
                 editBack:'← Panelga qaytish', editSub:"Mehmonxona sozlamalarini tahrirlash",
@@ -885,6 +888,7 @@ EDIT_HTML = """
                 editIntegDesc:"Mehmonxona veb-saytiga bir qator kod qo'shing — 🛎️ konsyerj tugmasi paydo bo'ladi.",
                 editCopyBtn:"📋 Kodni nusxalash", editPreviewBtn:"👁️ Vidjet oldinko'rish",
                 editSaveBtn:"💾 Saqlash", success:"✅ Saqlandi!",
+                hintTgToken:"@BotFather dan oling", hintTgChat:"@userinfobot dan oling", phInfo:"Mehmonxona ma'lumotlari...", phNewPassword:"Yangi parol",
             },
         };
         (function applyEditLang() {
