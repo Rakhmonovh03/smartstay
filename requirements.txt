@@ -9,3 +9,4 @@ openpyxl
 bcrypt
 slowapi
 stripe
+cryptography

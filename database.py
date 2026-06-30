@@ -3,6 +3,7 @@ import re
 import bcrypt
 from datetime import datetime
 from config import DATABASE_PATH, URGENT_KEYWORDS
+from crypto_util import encrypt, decrypt
 
 
 def hash_password(password: str) -> str:
@@ -680,7 +681,8 @@ def save_guest(hotel_slug, room, first_name, last_name, passport,
            (hotel_slug, room, first_name, last_name, passport, nationality,
             check_in, check_out, status, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
-        (hotel_slug, room, first_name, last_name, passport, nationality,
+        (hotel_slug, room, encrypt(first_name), encrypt(last_name),
+         encrypt(passport), nationality,
          check_in, check_out, datetime.now().strftime("%Y-%m-%d %H:%M"))
     )
     guest_id = cur.lastrowid
@@ -701,8 +703,8 @@ def get_guests(hotel_slug: str) -> list:
     conn.close()
     return [
         {
-            "id": r[0], "room": r[1], "first_name": r[2], "last_name": r[3],
-            "passport": r[4], "nationality": r[5], "check_in": r[6],
+            "id": r[0], "room": r[1], "first_name": decrypt(r[2]), "last_name": decrypt(r[3]),
+            "passport": decrypt(r[4]), "nationality": r[5], "check_in": r[6],
             "check_out": r[7], "status": r[8], "notes": r[9], "created_at": r[10]
         }
         for r in rows
@@ -750,7 +752,7 @@ def get_guest_by_room(hotel_slug: str, room: str) -> dict | None:
     conn.close()
     if row:
         return {
-            "id": row[0], "first_name": row[1], "last_name": row[2],
+            "id": row[0], "first_name": decrypt(row[1]), "last_name": decrypt(row[2]),
             "check_in": row[3], "check_out": row[4], "reviewed": row[5]
         }
     return None
@@ -779,7 +781,7 @@ def get_recent_ratings(hotel_slug: str, limit: int = 30) -> list:
     return [
         {
             "id": r[0], "room": r[1], "rating": r[2], "created_at": r[3],
-            "guest_name": f"{r[4] or ''} {r[5] or ''}".strip() or None
+            "guest_name": f"{decrypt(r[4]) or ''} {decrypt(r[5]) or ''}".strip() or None
         }
         for r in rows
     ]
@@ -796,7 +798,7 @@ def get_overdue_guests(hotel_slug: str) -> list:
     ).fetchall()
     conn.close()
     return [
-        {"id": r[0], "first_name": r[1], "last_name": r[2], "room": r[3], "check_out": r[4]}
+        {"id": r[0], "first_name": decrypt(r[1]), "last_name": decrypt(r[2]), "room": r[3], "check_out": r[4]}
         for r in rows
     ]
 
@@ -855,7 +857,7 @@ def get_daily_digest_data(hotel_slug: str) -> dict:
         "active_guests": active,
         "checkins_today": checkins_today,
         "checkouts_today": [
-            {"name": f"{r[0]} {r[1]}", "room": r[2]} for r in checkouts_today
+            {"name": f"{decrypt(r[0])} {decrypt(r[1])}", "room": r[2]} for r in checkouts_today
         ],
         "unread_messages": unread,
         "avg_rating": avg_row[0],

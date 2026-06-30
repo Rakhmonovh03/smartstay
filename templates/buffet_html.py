@@ -334,7 +334,7 @@ def get_buffet_html(hotel_name: str, slug: str) -> str:
     tr: {{
       pageSub: '{hotel_name} — AI büfe analizi',
       lblUpload: '📷 Büfe fotoğrafı yükle',
-      uploadHint: 'Fotoğraf seçmek için tıklayın<br><small>JPG / PNG / WEBP — 20 MB\'a kadar</small>',
+      uploadHint: "Fotoğraf seçmek için tıklayın<br><small>JPG / PNG / WEBP — 20 MB'a kadar</small>",
       lblAnalyze: 'AI ile analiz et',
       lblSpinner: '⏳ AI büfe fotoğrafını analiz ediyor...',
       lblResults: '📊 Analiz sonuçları',
@@ -353,13 +353,13 @@ def get_buffet_html(hotel_name: str, slug: str) -> str:
       lblAnalyze: 'AI bilan tahlil qilish',
       lblSpinner: '⏳ AI bufet rasmini tahlil qilmoqda...',
       lblResults: '📊 Tahlil natijalari',
-      lblAlertTitle: '⚠️ To\'ldirish kerak',
+      lblAlertTitle: "⚠️ To'ldirish kerak",
       lblHistory: '🕐 Skanlar tarixi',
       historyLoading: 'Yuklanmoqda...',
-      historyEmpty: 'Hali skan yo\'q',
+      historyEmpty: "Hali skan yo'q",
       historyError: 'Tarixni yuklashda xato',
       urgentBadge: '⚠️ Shoshilinch',
-      statusEmpty: 'Bo\'sh', statusLow: 'Kam', statusGood: 'Normal', statusFull: 'To\'liq',
+      statusEmpty: "Bo'sh", statusLow: 'Kam', statusGood: 'Normal', statusFull: "To'liq",
     }},
   }};
 
