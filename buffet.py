@@ -125,9 +125,10 @@ def save_buffet_scan(hotel_slug: str, data: dict) -> int:
     Возвращает id новой записи.
     """
     conn = sqlite3.connect(DATABASE_PATH)
+    # Local time — consistent with the rest of the app (messages, guests, etc.)
     cur = conn.execute(
         "INSERT INTO buffet_scans (hotel_slug, scan_time, dishes_json) VALUES (?, ?, ?)",
-        (hotel_slug, datetime.utcnow().isoformat(), json.dumps(data, ensure_ascii=False)),
+        (hotel_slug, datetime.now().isoformat(), json.dumps(data, ensure_ascii=False)),
     )
     row_id = cur.lastrowid
     conn.commit()
@@ -158,7 +159,7 @@ def get_buffet_history(hotel_slug: str, days: int = 7) -> list:
     Возвращает все сканы за последние N дней (по умолчанию 7),
     отсортированные от новых к старым.
     """
-    since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    since = (datetime.now() - timedelta(days=days)).isoformat()
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     rows = conn.execute(

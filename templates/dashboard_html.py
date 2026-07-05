@@ -667,7 +667,7 @@ DASHBOARD_HTML = """
                 <div class="chart-card">
                     <div class="chart-title" id="chartCatsTitle">📋 Top request categories</div>
                     <div style="height:160px;position:relative"><canvas id="chartCategories"></canvas></div>
-                    <div id="noCats" style="display:none;color:var(--text3);font-size:13px;margin-top:8px" id="noCatsLbl">No data yet</div>
+                    <div id="noCats" style="display:none;color:var(--text3);font-size:13px;margin-top:8px" data-i18n="anNoData">No data yet</div>
                 </div>
                 <div class="chart-card">
                     <div class="chart-title" id="chartFunnelTitle">🔽 Engagement funnel</div>
@@ -741,14 +741,14 @@ DASHBOARD_HTML = """
                 </div>
                 <div style="display:flex;gap:12px;align-items:center;font-size:12px;color:var(--text3)">
                     <span><span style="display:inline-block;width:12px;height:12px;background:rgba(60,180,100,0.3);border-radius:3px;vertical-align:middle;margin-right:4px"></span>Check-in</span>
-                    <span><span style="display:inline-block;width:12px;height:12px;background:rgba(201,168,76,0.2);border-radius:3px;vertical-align:middle;margin-right:4px"></span>Dolu</span>
+                    <span><span style="display:inline-block;width:12px;height:12px;background:rgba(201,168,76,0.2);border-radius:3px;vertical-align:middle;margin-right:4px"></span><span data-i18n="calBusy">Dolu</span></span>
                     <span><span style="display:inline-block;width:12px;height:12px;background:rgba(220,80,80,0.2);border-radius:3px;vertical-align:middle;margin-right:4px"></span>Check-out</span>
                     <button class="btn btn-outline btn-sm" data-i18n="btnRefresh" onclick="loadCalendar()">↻ Yenile</button>
                 </div>
             </div>
             <div class="cal-wrap">
                 <div id="calendarGrid">
-                    <div style="text-align:center;padding:60px;color:var(--text3)">Yükleniyor…</div>
+                    <div style="text-align:center;padding:60px;color:var(--text3)" data-i18n="scLoading">Yükleniyor…</div>
                 </div>
             </div>
         </div>
@@ -760,22 +760,22 @@ DASHBOARD_HTML = """
         <div class="req-modal-overlay" id="reqModalOverlay" onclick="if(event.target===this)closeReqModal()">
             <div class="req-modal">
                 <h3 data-i18n="reqAddTitle">➕ Yeni Talep Ekle</h3>
-                <label>ODA NUMARASI</label>
+                <label data-i18n="reqLblRoom">ODA NUMARASI</label>
                 <input type="text" id="reqRoom" placeholder="101">
-                <label>MİSAFİR ADI (isteğe bağlı)</label>
-                <input type="text" id="reqGuest" placeholder="Ad Soyad">
-                <label>KATEGORİ</label>
+                <label data-i18n="reqLblGuest">MİSAFİR ADI (isteğe bağlı)</label>
+                <input type="text" id="reqGuest" data-i18n-ph="reqGuestPh" placeholder="Ad Soyad">
+                <label data-i18n="reqLblCat">KATEGORİ</label>
                 <select id="reqCat">
-                    <option value="general">📌 Genel</option>
-                    <option value="room_service">🍽 Oda Servisi</option>
-                    <option value="maintenance">🔧 Bakım</option>
-                    <option value="housekeeping">🧹 Temizlik</option>
+                    <option value="general" data-i18n="reqCatGeneral">📌 Genel</option>
+                    <option value="room_service" data-i18n="reqCatRoomService">🍽 Oda Servisi</option>
+                    <option value="maintenance" data-i18n="reqCatMaintenance">🔧 Bakım</option>
+                    <option value="housekeeping" data-i18n="reqCatHousekeeping">🧹 Temizlik</option>
                 </select>
-                <label>TALEP DETAYI</label>
-                <textarea id="reqMsg" rows="3" placeholder="Talep açıklaması..."></textarea>
+                <label data-i18n="reqLblDetail">TALEP DETAYI</label>
+                <textarea id="reqMsg" rows="3" data-i18n-ph="reqMsgPh" placeholder="Talep açıklaması..."></textarea>
                 <div style="display:flex;gap:10px;justify-content:flex-end">
-                    <button class="btn btn-dark" onclick="closeReqModal()">İptal</button>
-                    <button class="btn btn-gold" onclick="submitManualRequest()">💾 Kaydet</button>
+                    <button class="btn btn-dark" onclick="closeReqModal()" data-i18n="svcCancelBtn">İptal</button>
+                    <button class="btn btn-gold" onclick="submitManualRequest()" data-i18n="svcSaveBtn">💾 Kaydet</button>
                 </div>
             </div>
         </div>
@@ -802,17 +802,17 @@ DASHBOARD_HTML = """
                 <table class="req-table">
                     <thead>
                         <tr>
-                            <th>Oda</th>
-                            <th class="hide-mobile">Misafir</th>
-                            <th class="hide-mobile">Kategori</th>
-                            <th>Talep</th>
-                            <th>Durum</th>
-                            <th class="hide-mobile">Zaman</th>
+                            <th data-i18n="thRoom">Oda</th>
+                            <th class="hide-mobile" data-i18n="fUserLbl">Misafir</th>
+                            <th class="hide-mobile" data-i18n="reqLblCat">Kategori</th>
+                            <th data-i18n="thReqMsg">Talep</th>
+                            <th data-i18n="thStatus">Durum</th>
+                            <th class="hide-mobile" data-i18n="thTime">Zaman</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody id="requestsList">
-                        <tr><td colspan="7" class="req-empty">Yükleniyor…</td></tr>
+                        <tr><td colspan="7" class="req-empty" data-i18n="scLoading">Yükleniyor…</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -851,11 +851,11 @@ DASHBOARD_HTML = """
                 </div>
                 <div style="margin-bottom:12px">
                     <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px" id="svcLblName">SERVICE NAME</label>
-                    <input id="svcName" type="text" placeholder="e.g. Breakfast in room" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px">
+                    <input id="svcName" type="text" data-i18n-ph="svcNamePh" placeholder="e.g. Breakfast in room" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px">
                 </div>
                 <div style="margin-bottom:12px">
                     <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px" id="svcLblDesc">DESCRIPTION (optional)</label>
-                    <input id="svcDesc" type="text" placeholder="Brief description for guests" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px">
+                    <input id="svcDesc" type="text" data-i18n-ph="svcDescPh" placeholder="Brief description for guests" style="width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px">
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
                     <div>
@@ -882,7 +882,7 @@ DASHBOARD_HTML = """
 
             <!-- Services grid -->
             <div id="svcGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
-                <div style="color:var(--text2);font-size:14px;padding:20px">Загрузка...</div>
+                <div style="color:var(--text2);font-size:14px;padding:20px" data-i18n="svcLoading">Загрузка...</div>
             </div>
         </div>
 
@@ -890,39 +890,39 @@ DASHBOARD_HTML = """
         <div id="staffView" style="display:none">
             <div class="page-header" style="margin-bottom:20px">
                 <div>
-                    <h2 style="font-size:20px;font-weight:700">👥 Personel Yönetimi</h2>
-                    <div style="color:#888;font-size:13px">Otele erişimi olan çalışanlar</div>
+                    <h2 style="font-size:20px;font-weight:700" id="stTitle">👥 Personel Yönetimi</h2>
+                    <div style="color:#888;font-size:13px" id="stSub">Otele erişimi olan çalışanlar</div>
                 </div>
             </div>
             <!-- Add staff form -->
             <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:20px;margin-bottom:24px">
-                <div style="font-weight:600;font-size:14px;margin-bottom:14px;color:#C9A84C">➕ Yeni Personel Ekle</div>
+                <div style="font-weight:600;font-size:14px;margin-bottom:14px;color:#C9A84C" id="stAddTitle">➕ Yeni Personel Ekle</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
                     <div>
-                        <div style="font-size:11px;color:#888;margin-bottom:4px">AD SOYAD</div>
+                        <div style="font-size:11px;color:#888;margin-bottom:4px" id="stLblName">AD SOYAD</div>
                         <input type="text" id="newStaffName" placeholder="Ahmet Yılmaz"
                                style="width:100%;padding:8px 10px;background:#111;border:1px solid #333;border-radius:6px;color:#f0f0f0;font-size:13px">
                     </div>
                     <div>
-                        <div style="font-size:11px;color:#888;margin-bottom:4px">KULLANICI ADI</div>
+                        <div style="font-size:11px;color:#888;margin-bottom:4px" id="stLblUser">KULLANICI ADI</div>
                         <input type="text" id="newStaffUser" placeholder="ahmet.yilmaz"
                                style="width:100%;padding:8px 10px;background:#111;border:1px solid #333;border-radius:6px;color:#f0f0f0;font-size:13px">
                     </div>
                     <div>
-                        <div style="font-size:11px;color:#888;margin-bottom:4px">ŞİFRE</div>
-                        <input type="password" id="newStaffPass" placeholder="min. 6 karakter"
+                        <div style="font-size:11px;color:#888;margin-bottom:4px" id="stLblPass">ŞİFRE</div>
+                        <input type="password" id="newStaffPass" data-i18n-ph="stPassPh" placeholder="min. 6 karakter"
                                style="width:100%;padding:8px 10px;background:#111;border:1px solid #333;border-radius:6px;color:#f0f0f0;font-size:13px">
                     </div>
                     <div>
-                        <div style="font-size:11px;color:#888;margin-bottom:4px">ROL</div>
+                        <div style="font-size:11px;color:#888;margin-bottom:4px" id="stLblRole">ROL</div>
                         <select id="newStaffRole"
                                 style="width:100%;padding:8px 10px;background:#111;border:1px solid #333;border-radius:6px;color:#f0f0f0;font-size:13px">
-                            <option value="receptionist">Resepsiyon</option>
-                            <option value="housekeeping">Housekeeping</option>
-                            <option value="manager">Yönetici</option>
+                            <option value="receptionist" id="roleReceptionist">Resepsiyon</option>
+                            <option value="housekeeping" id="roleHousekeeping">Housekeeping</option>
+                            <option value="manager" id="roleManager">Yönetici</option>
                         </select>
                     </div>
-                    <button onclick="addStaffMember()"
+                    <button onclick="addStaffMember()" id="stAddBtn"
                             style="padding:8px 16px;background:#C9A84C;color:#000;border:none;border-radius:6px;font-weight:700;cursor:pointer;white-space:nowrap">
                         ✓ Ekle
                     </button>
@@ -934,21 +934,21 @@ DASHBOARD_HTML = """
                 <table style="width:100%;border-collapse:collapse" id="staffTable">
                     <thead>
                         <tr style="background:#222">
-                            <th style="padding:12px 16px;text-align:left;font-size:12px;color:#888;font-weight:600">AD SOYAD</th>
-                            <th style="padding:12px 16px;text-align:left;font-size:12px;color:#888;font-weight:600">KULLANICI ADI</th>
-                            <th style="padding:12px 16px;text-align:left;font-size:12px;color:#888;font-weight:600">ROL</th>
-                            <th style="padding:12px 16px;text-align:left;font-size:12px;color:#888;font-weight:600">OLUŞTURULMA</th>
-                            <th style="padding:12px 16px;text-align:right;font-size:12px;color:#888;font-weight:600">İŞLEMLER</th>
+                            <th style="padding:12px 16px;text-align:left;font-size:12px;color:#888;font-weight:600" id="thStName">AD SOYAD</th>
+                            <th style="padding:12px 16px;text-align:left;font-size:12px;color:#888;font-weight:600" id="thStUser">KULLANICI ADI</th>
+                            <th style="padding:12px 16px;text-align:left;font-size:12px;color:#888;font-weight:600" id="thStRole">ROL</th>
+                            <th style="padding:12px 16px;text-align:left;font-size:12px;color:#888;font-weight:600" id="thStCreated">OLUŞTURULMA</th>
+                            <th style="padding:12px 16px;text-align:right;font-size:12px;color:#888;font-weight:600" id="thStActions">İŞLEMLER</th>
                         </tr>
                     </thead>
                     <tbody id="staffBody">
-                        <tr><td colspan="5" style="padding:24px;text-align:center;color:#555">Yükleniyor...</td></tr>
+                        <tr><td colspan="5" style="padding:24px;text-align:center;color:#555" data-i18n="scLoading">Yükleniyor...</td></tr>
                     </tbody>
                 </table>
             </div>
             <!-- Staff login link -->
             <div style="margin-top:16px;font-size:13px;color:#666">
-                👤 Personel giriş sayfası:
+                <span id="stLoginLabel">👤 Personel giriş sayfası:</span>
                 <span id="staffLoginLink" style="color:#C9A84C"></span>
             </div>
         </div>
@@ -1000,35 +1000,35 @@ DASHBOARD_HTML = """
 
             <!-- Summary cards -->
             <div class="analytics-grid" id="anCards">
-                <div class="an-card"><div class="an-num" id="anAvgRating">—</div><div class="an-label">Ort. Puan</div><div class="an-sub" id="anRatingCount"></div></div>
-                <div class="an-card"><div class="an-num" id="anTotalGuests">—</div><div class="an-label">Toplam Misafir</div><div class="an-sub" id="anActiveGuests"></div></div>
-                <div class="an-card"><div class="an-num" id="anAvgStay">—</div><div class="an-label">Ort. Konaklama</div><div class="an-sub">gün</div></div>
-                <div class="an-card"><div class="an-num" id="anCheckedOut">—</div><div class="an-label">Check-out Yapılan</div><div class="an-sub" id="anCheckedIn"></div></div>
+                <div class="an-card"><div class="an-num" id="anAvgRating">—</div><div class="an-label" id="anAvgLbl">Ort. Puan</div><div class="an-sub" id="anRatingCount"></div></div>
+                <div class="an-card"><div class="an-num" id="anTotalGuests">—</div><div class="an-label" id="anGuestsLbl">Toplam Misafir</div><div class="an-sub" id="anActiveGuests"></div></div>
+                <div class="an-card"><div class="an-num" id="anAvgStay">—</div><div class="an-label" id="anStayLbl">Ort. Konaklama</div><div class="an-sub" id="anStayUnit">gün</div></div>
+                <div class="an-card"><div class="an-num" id="anCheckedOut">—</div><div class="an-label" id="anOutLbl">Check-out Yapılan</div><div class="an-sub" id="anCheckedIn"></div></div>
             </div>
 
             <div class="an-two">
                 <!-- Rating distribution -->
                 <div class="an-section">
-                    <div class="an-title">⭐ Puan Dağılımı</div>
+                    <div class="an-title" id="anDistTitle">⭐ Puan Dağılımı</div>
                     <div id="anDist">
-                        <div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0">Veri yok</div>
+                        <div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0" data-i18n="anNoData">Veri yok</div>
                     </div>
                 </div>
 
                 <!-- Nationality breakdown -->
                 <div class="an-section">
-                    <div class="an-title">🌍 Misafir Uyruğu (İlk 5)</div>
+                    <div class="an-title" id="anNatTitle">🌍 Misafir Uyruğu (İlk 5)</div>
                     <div id="anNat">
-                        <div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0">Veri yok</div>
+                        <div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0" data-i18n="anNoData">Veri yok</div>
                     </div>
                 </div>
             </div>
 
             <!-- Rating trend -->
             <div class="an-section">
-                <div class="an-title">📈 Son 7 Gün — Puan Trendi</div>
+                <div class="an-title" id="anTrendTitle">📈 Son 7 Gün — Puan Trendi</div>
                 <div class="trend-wrap" id="anTrend">
-                    <div style="color:var(--text3);font-size:13px;padding:20px 0">Veri yok</div>
+                    <div style="color:var(--text3);font-size:13px;padding:20px 0" data-i18n="anNoData">Veri yok</div>
                 </div>
             </div>
         </div>
@@ -1229,7 +1229,7 @@ DASHBOARD_HTML = """
             document.getElementById('statRooms').textContent = rooms;
             document.getElementById('statUnread').textContent = unread;
             document.getElementById('unreadBadge').innerHTML = unread > 0
-                ? `<span style="background:#E05555;color:white;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:600">${{unread}} yeni</span>`
+                ? `<span style="background:#E05555;color:white;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:600">${{unread}} ${{DT('newWord')}}</span>`
                 : '';
 
             // ── Tab title badge ─────────────────────────────────────────
@@ -1423,15 +1423,15 @@ DASHBOARD_HTML = """
                 document.getElementById('anAvgRating').textContent =
                     d.avg_rating ? d.avg_rating + ' ★' : '—';
                 document.getElementById('anRatingCount').textContent =
-                    (d.rating_count || 0) + ' değerlendirme';
+                    (d.rating_count || 0) + ' ' + DT('anRatingWord');
                 document.getElementById('anTotalGuests').textContent = d.guests?.total ?? '—';
                 document.getElementById('anActiveGuests').textContent =
-                    (d.guests?.checked_in ?? 0) + ' aktif';
+                    (d.guests?.checked_in ?? 0) + ' ' + DT('anActiveWord');
                 document.getElementById('anAvgStay').textContent =
                     d.guests?.avg_stay_days != null ? d.guests.avg_stay_days : '—';
                 document.getElementById('anCheckedOut').textContent = d.guests?.checked_out ?? '—';
                 document.getElementById('anCheckedIn').textContent =
-                    (d.guests?.checked_in ?? 0) + ' içeride';
+                    (d.guests?.checked_in ?? 0) + ' ' + DT('anInsideWord');
 
                 // Rating distribution
                 const distEl = document.getElementById('anDist');
@@ -1456,14 +1456,14 @@ DASHBOARD_HTML = """
                 // Rating trend
                 const trendEl = document.getElementById('anTrend');
                 if (!d.rating_trend || !d.rating_trend.length) {{
-                    trendEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:20px 0">Son 7 günde veri yok</div>';
+                    trendEl.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:20px 0">' + DT('anNoData7') + '</div>';
                 }} else {{
                     const maxAvg = 5;
                     trendEl.innerHTML = d.rating_trend.map(t => {{
                         const h = Math.max(Math.round((t.avg / maxAvg) * 70), 4);
                         const color = t.avg >= 4 ? '#C9A84C' : t.avg >= 3 ? '#E8A040' : '#E05555';
                         return `<div class="trend-bar">
-                            <div class="trend-fill" style="height:${{h}}px;background:${{color}}" data-tip="${{t.avg}}★ (${{t.count}} yorum)"></div>
+                            <div class="trend-fill" style="height:${{h}}px;background:${{color}}" data-tip="${{t.avg}}★ (${{t.count}})"></div>
                             <div class="trend-label">${{t.day.slice(5)}}</div>
                         </div>`;
                     }}).join('');
@@ -1472,7 +1472,7 @@ DASHBOARD_HTML = """
                 // Nationalities
                 const natEl = document.getElementById('anNat');
                 if (!d.nationalities || !d.nationalities.length) {{
-                    natEl.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0">Veri yok</div>';
+                    natEl.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px 0">' + DT('anNoData') + '</div>';
                 }} else {{
                     const maxNat = d.nationalities[0]?.count || 1;
                     natEl.innerHTML = d.nationalities.map(n => {{
@@ -1525,17 +1525,14 @@ DASHBOARD_HTML = """
             loadRequests();
         }}
 
-        const REQ_CAT_LABEL = {{
-            room_service: '🍽 Oda Servisi',
-            maintenance:  '🔧 Bakım',
-            housekeeping: '🧹 Temizlik',
-            general:      '📌 Genel',
-        }};
-        const REQ_STATUS_LABEL = {{
-            pending:     '⏳ Bekliyor',
-            in_progress: '🔄 İşlemde',
-            resolved:    '✅ Çözüldü',
-        }};
+        function _reqCatLabel(cat) {{
+            return ({{ room_service: DT('reqCatRoomService'), maintenance: DT('reqCatMaintenance'),
+                       housekeeping: DT('reqCatHousekeeping'), general: DT('reqCatGeneral') }})[cat] || cat;
+        }}
+        function _reqStatusLabel(st) {{
+            return ({{ pending: DT('reqStPending'), in_progress: DT('reqStProgress'),
+                       resolved: DT('reqStResolved') }})[st] || st;
+        }}
         const REQ_NEXT_STATUS = {{
             pending:     'in_progress',
             in_progress: 'resolved',
@@ -1557,9 +1554,9 @@ DASHBOARD_HTML = """
                 }}
 
                 tbody.innerHTML = data.requests.map(r => {{
-                    const catLabel = REQ_CAT_LABEL[r.category] || r.category;
+                    const catLabel = _reqCatLabel(r.category);
                     const catClass = 'req-cat req-cat-' + r.category;
-                    const stLabel  = REQ_STATUS_LABEL[r.status] || r.status;
+                    const stLabel  = _reqStatusLabel(r.status);
                     const stClass  = 'req-status req-status-' + r.status;
                     const nextSt   = REQ_NEXT_STATUS[r.status];
                     const time = r.created_at ? r.created_at.slice(5,16) : '';
@@ -1579,7 +1576,7 @@ DASHBOARD_HTML = """
                 }}).join('');
             }} catch(e) {{
                 document.getElementById('requestsList').innerHTML =
-                    '<tr><td colspan="7" class="req-empty">Yüklenemedi</td></tr>';
+                    '<tr><td colspan="7" class="req-empty">' + DT('reqLoadFail') + '</td></tr>';
             }}
         }}
 
@@ -1596,7 +1593,7 @@ DASHBOARD_HTML = """
         }}
 
         async function removeRequest(id) {{
-            if (!confirm('Bu talebi silmek istiyor musunuz?')) return;
+            if (!confirm(DT('reqDelConfirm'))) return;
             try {{
                 await fetch(apiBase + '/requests/' + id, {{method: 'DELETE'}});
                 loadRequests();
@@ -1935,7 +1932,7 @@ DASHBOARD_HTML = """
         }}
 
         // ===== STAFF VIEW =====
-        const _ROLE_LABELS = {{ manager: '👑 Yönetici', receptionist: '🛎️ Resepsiyon', housekeeping: '🧹 Housekeeping' }};
+        function _roleLabel(role) {{ return ({{ manager: '👑 ' + DT('roleManager'), receptionist: '🛎️ ' + DT('roleReceptionist'), housekeeping: '🧹 ' + DT('roleHousekeeping') }})[role] || role; }}
         const _ROLE_COLORS = {{ manager: '#C9A84C', receptionist: '#4a9eff', housekeeping: '#4caf50' }};
 
         // ===== STAFF CHAT =====
@@ -2190,7 +2187,7 @@ DASHBOARD_HTML = """
             const list = await r.json();
             const tbody = document.getElementById('staffBody');
             if (!list.length) {{
-                tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:#555">Henüz personel eklenmedi</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:#555">' + DT('stEmpty') + '</td></tr>';
                 return;
             }}
             tbody.innerHTML = list.map(s => `
@@ -2200,18 +2197,18 @@ DASHBOARD_HTML = """
                     <td style="padding:12px 16px">
                         <span style="background:${{_ROLE_COLORS[s.role]}}22;color:${{_ROLE_COLORS[s.role]}};
                                      padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600">
-                            ${{_ROLE_LABELS[s.role] || s.role}}
+                            ${{_roleLabel(s.role)}}
                         </span>
                     </td>
                     <td style="padding:12px 16px;color:#666;font-size:13px">${{s.created_at}}</td>
                     <td style="padding:12px 16px;text-align:right">
                         <button onclick="resetStaffPw(${{s.id}},'${{s.name}}')"
                                 style="padding:5px 10px;background:#2a2a2a;border:1px solid #333;color:#aaa;border-radius:6px;cursor:pointer;font-size:12px;margin-right:6px">
-                            🔑 Şifre
+                            🔑 ${{DT('stPwBtn')}}
                         </button>
                         <button onclick="removeStaff(${{s.id}},'${{s.name}}')"
                                 style="padding:5px 10px;background:#3a1515;border:1px solid #5a2020;color:#e05555;border-radius:6px;cursor:pointer;font-size:12px">
-                            🗑️ Sil
+                            🗑️ ${{DT('stDelBtn')}}
                         </button>
                     </td>
                 </tr>`).join('');
@@ -2224,7 +2221,7 @@ DASHBOARD_HTML = """
             const role = document.getElementById('newStaffRole').value;
             const errEl = document.getElementById('staffAddError');
             errEl.style.display = 'none';
-            if (!name || !username || !password) {{ errEl.textContent = 'Tüm alanları doldurun'; errEl.style.display='block'; return; }}
+            if (!name || !username || !password) {{ errEl.textContent = DT('stFillAll'); errEl.style.display='block'; return; }}
             const r = await fetch('/api/hotel/' + slug + '/staff', {{
                 method: 'POST', credentials: 'include',
                 headers: {{'Content-Type':'application/json'}},
@@ -2237,21 +2234,21 @@ DASHBOARD_HTML = """
                 document.getElementById('newStaffPass').value = '';
                 loadStaff();
             }} else {{
-                errEl.textContent = '❌ ' + (d.error || 'Hata');
+                errEl.textContent = '❌ ' + (d.error || DT('errWord'));
                 errEl.style.display = 'block';
             }}
         }}
 
         async function removeStaff(id, name) {{
-            if (!confirm(`"${{name}}" adlı personeli silmek istediğinize emin misiniz?`)) return;
+            if (!confirm(DT('stDelConfirm').replace('{{name}}', name))) return;
             const r = await fetch('/api/hotel/' + slug + '/staff/' + id, {{method:'DELETE', credentials:'include'}});
             const d = await r.json();
             if (d.ok) loadStaff();
-            else alert('❌ ' + (d.error || 'Silinemedi'));
+            else alert('❌ ' + (d.error || DT('stDelFail')));
         }}
 
         async function resetStaffPw(id, name) {{
-            const pw = prompt(`"${{name}}" için yeni şifre (min. 6 karakter):`);
+            const pw = prompt(DT('stNewPwPrompt').replace('{{name}}', name));
             if (!pw) return;
             const r = await fetch('/api/hotel/' + slug + '/staff/' + id + '/password', {{
                 method: 'PATCH', credentials: 'include',
@@ -2259,8 +2256,8 @@ DASHBOARD_HTML = """
                 body: JSON.stringify({{password: pw}})
             }});
             const d = await r.json();
-            if (d.ok) alert('✅ Şifre güncellendi');
-            else alert('❌ ' + (d.error || 'Hata'));
+            if (d.ok) alert('✅ ' + DT('stPwUpdated'));
+            else alert('❌ ' + (d.error || DT('errWord')));
         }}
 
         // ===== RATINGS VIEW =====
@@ -2287,7 +2284,7 @@ DASHBOARD_HTML = """
                 avgCard.style.display = 'block';
                 document.getElementById('ratingAvgNum').textContent = avg.toFixed(1);
                 document.getElementById('ratingAvgStars').textContent = '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg));
-                document.getElementById('ratingAvgSub').textContent = ratings.length + ' değerlendirme';
+                document.getElementById('ratingAvgSub').textContent = ratings.length + ' ' + DT('anRatingWord');
 
                 function stars(n) {{
                     return '★'.repeat(n) + '☆'.repeat(5 - n);
@@ -2485,18 +2482,18 @@ DASHBOARD_HTML = """
                     (r.urgent ? 'rgba(224,85,85,0.3)' : 'var(--border)') + ';cursor:pointer;transition:border-color 0.2s;';
                 card.onmouseenter = () => card.style.borderColor = 'var(--gold)';
                 card.onmouseleave = () => card.style.borderColor = r.urgent ? 'rgba(224,85,85,0.3)' : 'var(--border)';
-                const urgentBadge = r.urgent ? `<span class="badge badge-urgent" style="font-size:11px">🔴 ${{r.urgent}} acil</span>` : '';
-                const unreadBadge = r.unread ? `<span style="background:#E05555;color:white;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">${{r.unread}} yeni</span>` : '';
+                const urgentBadge = r.urgent ? `<span class="badge badge-urgent" style="font-size:11px">🔴 ${{r.urgent}} ${{DT('urgentWord')}}</span>` : '';
+                const unreadBadge = r.unread ? `<span style="background:#E05555;color:white;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">${{r.unread}} ${{DT('newWord')}}</span>` : '';
                 const guestLine = guest
-                    ? `<div style="font-size:12px;color:var(--gold);margin-bottom:4px">👤 ${{esc(guest.first_name)}} ${{esc(guest.last_name)}} · çıkış: ${{guest.check_out}}</div>`
+                    ? `<div style="font-size:12px;color:var(--gold);margin-bottom:4px">👤 ${{esc(guest.first_name)}} ${{esc(guest.last_name)}} · ${{DT('coWord')}}: ${{guest.check_out}}</div>`
                     : '';
                 card.innerHTML = `
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                        <span style="font-size:15px;font-weight:700;color:var(--gold)">🚪 Oda ${{esc(r.room)}}</span>
+                        <span style="font-size:15px;font-weight:700;color:var(--gold)">🚪 ${{DT('roomWord')}} ${{esc(r.room)}}</span>
                         <div style="display:flex;gap:6px">${{urgentBadge}}${{unreadBadge}}</div>
                     </div>
                     ${{guestLine}}
-                    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${{r.msgs.length}} mesaj · 💬 Yanıtla</div>
+                    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${{r.msgs.length}} ${{DT('msgWord')}} · 💬 ${{DT('replyWord')}}</div>
                     <div style="font-size:13px;color:var(--text2);overflow:hidden;white-space:nowrap;text-overflow:ellipsis"></div>
                     <div style="font-size:11px;color:var(--text3);margin-top:6px">${{esc(last.created_at)}}</div>
                 `;
@@ -2769,11 +2766,17 @@ DASHBOARD_HTML = """
         }}
 
         // ===== THEME =====
+        function _updateThemeLabel() {{
+            const isLight = document.body.classList.contains('light');
+            const lbl = document.getElementById('themeLabel');
+            if (lbl) lbl.textContent = isLight ? DT('themeDark') : DT('themeLight');
+            const ic = document.querySelector('#themeNav .nav-icon');
+            if (ic) ic.textContent = isLight ? '🌙' : '☀️';
+        }}
         function toggleTheme() {{
             const isLight = document.body.classList.toggle('light');
             localStorage.setItem('theme', isLight ? 'light' : 'dark');
-            document.getElementById('themeLabel').textContent = isLight ? 'Dark mode' : 'Light mode';
-            document.querySelector('#themeNav .nav-icon').textContent = isLight ? '🌙' : '☀️';
+            _updateThemeLabel();
             // Redraw Chart.js with updated colors
             if (document.getElementById('chartsGrid').style.display !== 'none') {{
                 Object.keys(_chartInstances).forEach(id => _destroyChart(id));
@@ -3012,9 +3015,8 @@ DASHBOARD_HTML = """
         // ===== INIT =====
         if (localStorage.getItem('theme') === 'light') {{
             document.body.classList.add('light');
-            document.getElementById('themeLabel').textContent = 'Dark mode';
-            document.querySelector('#themeNav .nav-icon').textContent = '🌙';
         }}
+        // theme label text is set by applyDashLang() (needs DASH_I18N, defined below)
 
         // Role-based tab visibility
         // Roles: manager (full), receptionist (messages/guests/requests), housekeeping (requests only)
@@ -3169,7 +3171,25 @@ DASHBOARD_HTML = """
                 msgEmpty:'No messages yet', ratingsEmpty:'📭 No reviews yet', replyPh:'Reply to guest...', msgWord:'msg', checkinQrHint:'📱 Guests scan this QR to check in',
                 scGeneral:'🏠 General', scReception:'🛎️ Reception', scHousekeeping:'🧹 Housekeeping', scMaintenance:'🔧 Maintenance',
                 scEmpty:'No messages. Be the first!', scInputPh:'Message to the team...', scLoading:'Loading...',
-                reqStProgress:'🔄 In progress', reqStResolved:'✅ Resolved'
+                reqStProgress:'🔄 In progress', reqStResolved:'✅ Resolved',
+                stTitle:'👥 Staff Management', stSub:'Employees with access to the hotel', stAddTitle:'➕ Add New Staff',
+                stLblName:'FULL NAME', stLblUser:'USERNAME', stLblPass:'PASSWORD', stLblRole:'ROLE', stPassPh:'min. 6 characters', stAddBtn:'✓ Add',
+                roleReceptionist:'Receptionist', roleHousekeeping:'Housekeeping', roleManager:'Manager',
+                thStName:'FULL NAME', thStUser:'USERNAME', thStRole:'ROLE', thStCreated:'CREATED', thStActions:'ACTIONS',
+                stEmpty:'No staff added yet', stLoginLabel:'👤 Staff login page:', stPwBtn:'Password', stDelBtn:'Delete',
+                stFillAll:'Fill in all fields', stDelConfirm:'Delete staff member "{{name}}"?', stNewPwPrompt:'New password for "{{name}}" (min. 6 characters):',
+                stPwUpdated:'Password updated', stDelFail:'Could not delete', errWord:'Error',
+                anAvgLbl:'Avg. Rating', anGuestsLbl:'Total Guests', anStayLbl:'Avg. Stay', anStayUnit:'days', anOutLbl:'Checked Out',
+                anDistTitle:'⭐ Rating Distribution', anNatTitle:'🌍 Guest Nationality (Top 5)', anTrendTitle:'📈 Last 7 Days — Rating Trend',
+                anNoData:'No data', anNoData7:'No data in the last 7 days', anRatingWord:'ratings', anActiveWord:'active', anInsideWord:'inside',
+                newWord:'new', urgentWord:'urgent', roomWord:'Room', coWord:'check-out', replyWord:'Reply',
+                reqLblRoom:'ROOM NUMBER', reqLblGuest:'GUEST NAME (optional)', reqGuestPh:'Full name',
+                reqLblCat:'CATEGORY', reqLblDetail:'REQUEST DETAILS', reqMsgPh:'Request description...',
+                reqCatGeneral:'📌 General', reqCatRoomService:'🍽 Room Service', reqCatMaintenance:'🔧 Maintenance', reqCatHousekeeping:'🧹 Housekeeping',
+                reqStPending:'⏳ Pending', thReqMsg:'Request', thStatus:'Status',
+                reqDelConfirm:'Delete this request?', reqLoadFail:'Failed to load', calBusy:'Occupied',
+                svcNamePh:'e.g. Breakfast in room', svcDescPh:'Brief description for guests',
+                themeLight:'Light mode', themeDark:'Dark mode'
             }},
             ru: {{
                 nt_all:'Все сообщения', nt_urgent:'Срочные', nt_guest:'Гость', nt_rooms:'Номера',
@@ -3220,7 +3240,25 @@ DASHBOARD_HTML = """
                 msgEmpty:'Пока нет сообщений', ratingsEmpty:'📭 Пока нет отзывов', replyPh:'Ответ гостю...', msgWord:'сообщ.', checkinQrHint:'📱 Гость сканирует этот QR для заселения',
                 scGeneral:'🏠 Общий', scReception:'🛎️ Ресепшен', scHousekeeping:'🧹 Горничная', scMaintenance:'🔧 Техника',
                 scEmpty:'Сообщений нет. Будьте первым!', scInputPh:'Сообщение для команды...', scLoading:'Загрузка...',
-                reqStProgress:'🔄 В работе', reqStResolved:'✅ Решено'
+                reqStProgress:'🔄 В работе', reqStResolved:'✅ Решено',
+                stTitle:'👥 Управление персоналом', stSub:'Сотрудники с доступом к отелю', stAddTitle:'➕ Добавить сотрудника',
+                stLblName:'ИМЯ И ФАМИЛИЯ', stLblUser:'ЛОГИН', stLblPass:'ПАРОЛЬ', stLblRole:'РОЛЬ', stPassPh:'мин. 6 символов', stAddBtn:'✓ Добавить',
+                roleReceptionist:'Ресепшен', roleHousekeeping:'Горничная', roleManager:'Менеджер',
+                thStName:'ИМЯ', thStUser:'ЛОГИН', thStRole:'РОЛЬ', thStCreated:'СОЗДАН', thStActions:'ДЕЙСТВИЯ',
+                stEmpty:'Персонал пока не добавлен', stLoginLabel:'👤 Страница входа персонала:', stPwBtn:'Пароль', stDelBtn:'Удалить',
+                stFillAll:'Заполните все поля', stDelConfirm:'Удалить сотрудника «{{name}}»?', stNewPwPrompt:'Новый пароль для «{{name}}» (мин. 6 символов):',
+                stPwUpdated:'Пароль обновлён', stDelFail:'Не удалось удалить', errWord:'Ошибка',
+                anAvgLbl:'Средний балл', anGuestsLbl:'Всего гостей', anStayLbl:'Среднее проживание', anStayUnit:'дней', anOutLbl:'Выехали',
+                anDistTitle:'⭐ Распределение оценок', anNatTitle:'🌍 Гражданство гостей (топ-5)', anTrendTitle:'📈 Последние 7 дней — тренд оценок',
+                anNoData:'Нет данных', anNoData7:'Нет данных за последние 7 дней', anRatingWord:'оценок', anActiveWord:'активных', anInsideWord:'в отеле',
+                newWord:'новых', urgentWord:'срочных', roomWord:'Номер', coWord:'выезд', replyWord:'Ответить',
+                reqLblRoom:'НОМЕР КОМНАТЫ', reqLblGuest:'ИМЯ ГОСТЯ (необязательно)', reqGuestPh:'Имя Фамилия',
+                reqLblCat:'КАТЕГОРИЯ', reqLblDetail:'ДЕТАЛИ ЗАПРОСА', reqMsgPh:'Описание запроса...',
+                reqCatGeneral:'📌 Общее', reqCatRoomService:'🍽 Рум-сервис', reqCatMaintenance:'🔧 Ремонт', reqCatHousekeeping:'🧹 Уборка',
+                reqStPending:'⏳ Ожидает', thReqMsg:'Запрос', thStatus:'Статус',
+                reqDelConfirm:'Удалить этот запрос?', reqLoadFail:'Не удалось загрузить', calBusy:'Занято',
+                svcNamePh:'напр. Завтрак в номер', svcDescPh:'Краткое описание для гостей',
+                themeLight:'Светлая тема', themeDark:'Тёмная тема'
             }},
             tr: {{
                 nt_all:'Tüm Mesajlar', nt_urgent:'Acil', nt_guest:'Misafir', nt_rooms:'Odalar',
@@ -3271,7 +3309,25 @@ DASHBOARD_HTML = """
                 msgEmpty:'Henüz mesaj yok', ratingsEmpty:'📭 Henüz değerlendirme yok', replyPh:'Misafire yanıt yaz...', msgWord:'mesaj', checkinQrHint:'📱 Misafir bu QR’ı okutarak check-in yapabilir',
                 scGeneral:'🏠 Genel', scReception:'🛎️ Resepsiyon', scHousekeeping:'🧹 Temizlik', scMaintenance:'🔧 Teknik',
                 scEmpty:'Mesaj yok. İlk siz olun!', scInputPh:'Ekibe mesaj...', scLoading:'Yükleniyor...',
-                reqStProgress:'🔄 İşlemde', reqStResolved:'✅ Çözüldü'
+                reqStProgress:'🔄 İşlemde', reqStResolved:'✅ Çözüldü',
+                stTitle:'👥 Personel Yönetimi', stSub:'Otele erişimi olan çalışanlar', stAddTitle:'➕ Yeni Personel Ekle',
+                stLblName:'AD SOYAD', stLblUser:'KULLANICI ADI', stLblPass:'ŞİFRE', stLblRole:'ROL', stPassPh:'min. 6 karakter', stAddBtn:'✓ Ekle',
+                roleReceptionist:'Resepsiyon', roleHousekeeping:'Temizlik', roleManager:'Yönetici',
+                thStName:'AD SOYAD', thStUser:'KULLANICI ADI', thStRole:'ROL', thStCreated:'OLUŞTURULMA', thStActions:'İŞLEMLER',
+                stEmpty:'Henüz personel eklenmedi', stLoginLabel:'👤 Personel giriş sayfası:', stPwBtn:'Şifre', stDelBtn:'Sil',
+                stFillAll:'Tüm alanları doldurun', stDelConfirm:'"{{name}}" adlı personeli silmek istediğinize emin misiniz?', stNewPwPrompt:'"{{name}}" için yeni şifre (min. 6 karakter):',
+                stPwUpdated:'Şifre güncellendi', stDelFail:'Silinemedi', errWord:'Hata',
+                anAvgLbl:'Ort. Puan', anGuestsLbl:'Toplam Misafir', anStayLbl:'Ort. Konaklama', anStayUnit:'gün', anOutLbl:'Check-out Yapılan',
+                anDistTitle:'⭐ Puan Dağılımı', anNatTitle:'🌍 Misafir Uyruğu (İlk 5)', anTrendTitle:'📈 Son 7 Gün — Puan Trendi',
+                anNoData:'Veri yok', anNoData7:'Son 7 günde veri yok', anRatingWord:'değerlendirme', anActiveWord:'aktif', anInsideWord:'içeride',
+                newWord:'yeni', urgentWord:'acil', roomWord:'Oda', coWord:'çıkış', replyWord:'Yanıtla',
+                reqLblRoom:'ODA NUMARASI', reqLblGuest:'MİSAFİR ADI (isteğe bağlı)', reqGuestPh:'Ad Soyad',
+                reqLblCat:'KATEGORİ', reqLblDetail:'TALEP DETAYI', reqMsgPh:'Talep açıklaması...',
+                reqCatGeneral:'📌 Genel', reqCatRoomService:'🍽 Oda Servisi', reqCatMaintenance:'🔧 Bakım', reqCatHousekeeping:'🧹 Temizlik',
+                reqStPending:'⏳ Bekliyor', thReqMsg:'Talep', thStatus:'Durum',
+                reqDelConfirm:'Bu talebi silmek istiyor musunuz?', reqLoadFail:'Yüklenemedi', calBusy:'Dolu',
+                svcNamePh:'örn: Odaya kahvaltı', svcDescPh:'Misafirler için kısa açıklama',
+                themeLight:'Açık tema', themeDark:'Koyu tema'
             }},
             uz: {{
                 nt_all:"Barcha xabarlar", nt_urgent:"Shoshilinch", nt_guest:"Mehmon", nt_rooms:"Xonalar",
@@ -3322,7 +3378,25 @@ DASHBOARD_HTML = """
                 msgEmpty:'Hozircha xabar yo‘q', ratingsEmpty:'📭 Hozircha sharh yo‘q', replyPh:'Mehmonga javob...', msgWord:'xabar', checkinQrHint:'📱 Mehmon shu QR’ni skanerlab check-in qiladi',
                 scGeneral:'🏠 Umumiy', scReception:'🛎️ Resepshn', scHousekeeping:'🧹 Tozalash', scMaintenance:'🔧 Texnika',
                 scEmpty:'Xabar yo‘q. Birinchi bo‘ling!', scInputPh:'Jamoaga xabar...', scLoading:'Yuklanmoqda...',
-                reqStProgress:'🔄 Jarayonda', reqStResolved:'✅ Hal qilindi'
+                reqStProgress:'🔄 Jarayonda', reqStResolved:'✅ Hal qilindi',
+                stTitle:"👥 Xodimlarni boshqarish", stSub:"Mehmonxonaga kirish huquqiga ega xodimlar", stAddTitle:"➕ Yangi xodim qo'shish",
+                stLblName:"ISM FAMILIYA", stLblUser:"LOGIN", stLblPass:"PAROL", stLblRole:"ROL", stPassPh:"kamida 6 belgi", stAddBtn:"✓ Qo'shish",
+                roleReceptionist:"Resepshn", roleHousekeeping:"Tozalash", roleManager:"Menejer",
+                thStName:"ISM", thStUser:"LOGIN", thStRole:"ROL", thStCreated:"YARATILGAN", thStActions:"AMALLAR",
+                stEmpty:"Hali xodim qo'shilmagan", stLoginLabel:"👤 Xodimlar kirish sahifasi:", stPwBtn:"Parol", stDelBtn:"O'chirish",
+                stFillAll:"Barcha maydonlarni to'ldiring", stDelConfirm:"\\"{{name}}\\" xodimini o'chirishni tasdiqlaysizmi?", stNewPwPrompt:'"{{name}}" uchun yangi parol (kamida 6 belgi):',
+                stPwUpdated:"Parol yangilandi", stDelFail:"O'chirib bo'lmadi", errWord:"Xato",
+                anAvgLbl:"O'rtacha ball", anGuestsLbl:"Jami mehmonlar", anStayLbl:"O'rtacha turish", anStayUnit:"kun", anOutLbl:"Chiqib ketganlar",
+                anDistTitle:"⭐ Baholar taqsimoti", anNatTitle:"🌍 Mehmon fuqaroligi (Top 5)", anTrendTitle:"📈 Oxirgi 7 kun — baho trendi",
+                anNoData:"Ma'lumot yo'q", anNoData7:"Oxirgi 7 kunda ma'lumot yo'q", anRatingWord:"baho", anActiveWord:"faol", anInsideWord:"ichkarida",
+                newWord:"yangi", urgentWord:"shoshilinch", roomWord:"Xona", coWord:"chiqish", replyWord:"Javob berish",
+                reqLblRoom:"XONA RAQAMI", reqLblGuest:"MEHMON ISMI (ixtiyoriy)", reqGuestPh:"Ism Familiya",
+                reqLblCat:"KATEGORIYA", reqLblDetail:"SO'ROV TAFSILOTI", reqMsgPh:"So'rov tavsifi...",
+                reqCatGeneral:"📌 Umumiy", reqCatRoomService:"🍽 Xona xizmati", reqCatMaintenance:"🔧 Ta'mirlash", reqCatHousekeeping:"🧹 Tozalash",
+                reqStPending:"⏳ Kutmoqda", thReqMsg:"So'rov", thStatus:"Holat",
+                reqDelConfirm:"Bu so'rovni o'chirasizmi?", reqLoadFail:"Yuklab bo'lmadi", calBusy:"Band",
+                svcNamePh:"masalan: Xonaga nonushta", svcDescPh:"Mehmonlar uchun qisqa tavsif",
+                themeLight:"Yorug' mavzu", themeDark:"Qorong'u mavzu"
             }}
         }};
 
@@ -3352,6 +3426,7 @@ DASHBOARD_HTML = """
             document.querySelectorAll('.lang-btn-dash').forEach(b => {{
                 b.classList.toggle('active', b.textContent === _dashLang.toUpperCase());
             }});
+            _updateThemeLabel();
         }}
 
         function setDashLang(l) {{
@@ -3361,7 +3436,7 @@ DASHBOARD_HTML = """
             // Re-render dynamically-built content (charts, analytics funnel, lists)
             // so it switches language immediately instead of waiting for the next
             // poll. Each is guarded — loaders no-op safely if their data isn't ready.
-            [loadData, loadCharts, loadAnalytics, loadRequests, loadRatings, loadGuests]
+            [loadData, loadCharts, loadAnalytics, loadRequests, loadRatings, loadGuests, loadStaff, renderRoomsView]
                 .forEach(fn => {{ try {{ if (typeof fn === 'function') fn(); }} catch(e) {{}} }});
         }}
 

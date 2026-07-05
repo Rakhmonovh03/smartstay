@@ -1,6 +1,10 @@
 @echo off
-cd /d "C:\Users\Victus\Desktop\smartstay"
+cd /d "%~dp0"
+
+set /p MSG="Commit message: "
+if "%MSG%"=="" set MSG=update
+
 git add -A
-git commit -m "Fix buffet page JS SyntaxError (UZ/TR apostrophes) + encrypt guest PII at rest"
+git commit -m "%MSG%"
 git push
 pause

@@ -1,0 +1,31 @@
+=== SmartStay: проверка компиляции === 
+Дата: 05.07.2026 20:06:18,39 
+ 
+Python 3.11.3
+ 
+[OK]   main.py 
+[OK]   database.py 
+[OK]   buffet.py 
+[OK]   telegram.py 
+[OK]   config.py 
+[OK]   notifications.py 
+[OK]   crypto_util.py 
+ 
+--- Шаблоны --- 
+[OK]   templates\admin_html.py 
+[OK]   templates\buffet_html.py 
+[OK]   templates\chat_html.py 
+[OK]   templates\checkin_html.py 
+[OK]   templates\dashboard_html.py 
+[OK]   templates\landing_html.py 
+[OK]   templates\other_html.py 
+[OK]   templates\owner_html.py 
+[OK]   templates\public_html.py 
+[OK]   templates\widget_html.py 
+ 
+--- Импорт приложения --- 
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "D:\smartstay\main.py", line 1, in <module>
+    from fastapi import FastAPI, Request, UploadFile, File
+ModuleNotFoundError: No module named 'fastapi'

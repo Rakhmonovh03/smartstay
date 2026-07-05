@@ -198,30 +198,20 @@ REGISTER_HTML = """<!DOCTYPE html>
                 <div class="hint" id="hintInfo">The more detail you provide, the better the AI responds</div>
             </div>
 
-            <div class="section-title" id="secRooms">Room Configuration</div>
-            <div class="tg-grid">
-                <div class="field">
-                    <label id="lblCount">ROOM COUNT</label>
-                    <input type="number" id="room_count" value="30" min="1" max="500" placeholder="30">
-                    <div class="hint" id="hintCount">Total number of rooms</div>
-                </div>
-                <div class="field">
-                    <label id="lblStart">FIRST ROOM NUMBER</label>
-                    <input type="number" id="room_start" value="101" min="1" max="9000" placeholder="101">
-                    <div class="hint" id="hintStart">e.g. 101 or 1</div>
-                </div>
-            </div>
+            <!-- Room configuration moved out of the form: sensible defaults, editable later in settings -->
+            <input type="hidden" id="room_count" value="30">
+            <input type="hidden" id="room_start" value="101">
             <input type="hidden" id="rooms_per_floor" value="0">
 
             <div class="section-title" id="secTg">Telegram Notifications (Optional)</div>
             <div class="tg-grid">
                 <div class="field">
-                    <label>BOT TOKEN</label>
+                    <label id="lblTgToken">BOT TOKEN</label>
                     <input type="text" id="tg_token" placeholder="7xxx:AAF...">
                     <div class="hint" id="hintTgToken">Get from @BotFather</div>
                 </div>
                 <div class="field">
-                    <label>CHAT ID</label>
+                    <label id="lblTgChat">CHAT ID</label>
                     <input type="text" id="tg_chat" placeholder="123456789">
                     <div class="hint" id="hintTgChat">Get from @userinfobot</div>
                 </div>
@@ -260,8 +250,8 @@ REGISTER_HTML = """<!DOCTYPE html>
                 sub:'Register your hotel — ready in 3 minutes',
                 secHotel:'Hotel Info', lblName:'HOTEL NAME', lblSlug:'URL ID (SLUG)', hintSlug:'Lowercase letters and hyphens only',
                 lblPwd:'MANAGER PASSWORD', lblInfo:'HOTEL INFORMATION', hintInfo:'The more detail you provide, the better the AI responds',
-                secRooms:'Room Configuration', lblCount:'ROOM COUNT', hintCount:'Total number of rooms', lblStart:'FIRST ROOM NUMBER', hintStart:'e.g. 101 or 1',
-                secTg:'Telegram Notifications (Optional)', hintTgToken:'Get from @BotFather', hintTgChat:'Get from @userinfobot', phInfo:'Hotel information...', phNewPassword:'New password',
+                phName:'e.g. Grand Palace Hotel', phSlug:'e.g. grand-palace', phPwd:'Choose a secure password', phInfoReg:'Pool hours, restaurant times, spa, phone numbers...',
+                secTg:'Telegram Notifications (Optional)', lblTgToken:'BOT TOKEN', lblTgChat:'CHAT ID', hintTgToken:'Get from @BotFather', hintTgChat:'Get from @userinfobot',
                 secInvite:'Invite Code', lblInvite:'INVITE CODE', hintInvite:'Code provided by SmartStay team',
                 registerBtn:'Register Hotel →', errRequired:'❌ Please fill in all required fields',
                 haveAccount:'Already have an account?', loginLink:'Login',
@@ -272,8 +262,8 @@ REGISTER_HTML = """<!DOCTYPE html>
                 sub:'Зарегистрируйте ваш отель — готово за 3 минуты',
                 secHotel:'Данные отеля', lblName:'НАЗВАНИЕ ОТЕЛЯ', lblSlug:'URL (SLUG)', hintSlug:'Только строчные буквы и дефисы',
                 lblPwd:'ПАРОЛЬ МЕНЕДЖЕРА', lblInfo:'ИНФОРМАЦИЯ ОБ ОТЕЛЕ', hintInfo:'Чем подробнее, тем лучше AI отвечает',
-                secRooms:'Конфигурация номеров', lblCount:'КОЛИЧЕСТВО НОМЕРОВ', hintCount:'Общее число номеров', lblStart:'ПЕРВЫЙ НОМЕР КОМНАТЫ', hintStart:'Напр. 101 или 1',
-                secTg:'Уведомления Telegram (необязательно)', hintTgToken:'Получить у @BotFather', hintTgChat:'Получить у @userinfobot', phInfo:'Информация об отеле...', phNewPassword:'Новый пароль',
+                phName:'Напр. Grand Palace Hotel', phSlug:'напр. grand-palace', phPwd:'Придумайте надёжный пароль', phInfoReg:'Часы работы бассейна, ресторана, спа, номера телефонов...',
+                secTg:'Уведомления Telegram (необязательно)', lblTgToken:'ТОКЕН БОТА', lblTgChat:'ID ЧАТА', hintTgToken:'Получить у @BotFather', hintTgChat:'Получить у @userinfobot',
                 secInvite:'Инвайт-код', lblInvite:'ИНВАЙТ-КОД', hintInvite:'Код от команды SmartStay',
                 registerBtn:'Зарегистрировать отель →', errRequired:'❌ Пожалуйста, заполните все обязательные поля',
                 haveAccount:'Уже есть аккаунт?', loginLink:'Войти',
@@ -284,8 +274,8 @@ REGISTER_HTML = """<!DOCTYPE html>
                 sub:'Otelinizi kaydedin — 3 dakikada hazır',
                 secHotel:'Otel Bilgileri', lblName:'OTELİN ADI', lblSlug:'URL KISALTMASI (SLUG)', hintSlug:'Sadece küçük harf ve tire kullanın',
                 lblPwd:'YÖNETİCİ ŞİFRESİ', lblInfo:'OTEL BİLGİLERİ', hintInfo:'Ne kadar detaylı olursa AI o kadar iyi yanıt verir',
-                secRooms:'Oda Yapılandırması', lblCount:'ODA SAYISI', hintCount:'Toplam oda adedi', lblStart:'İLK ODA NUMARASI', hintStart:'Örn: 101 veya 1',
-                secTg:'Telegram Bildirimleri (İsteğe Bağlı)', hintTgToken:"@BotFather'dan alın", hintTgChat:"@userinfobot'tan alın", phInfo:'Otel bilgileri...', phNewPassword:'Yeni şifre',
+                phName:'Örn: Grand Palace Hotel', phSlug:'örn: grand-palace', phPwd:'Güvenli bir şifre belirleyin', phInfoReg:'Havuz saatleri, restoran saatleri, spa, telefon numaraları...',
+                secTg:'Telegram Bildirimleri (İsteğe Bağlı)', lblTgToken:'BOT TOKEN', lblTgChat:'SOHBET ID', hintTgToken:"@BotFather'dan alın", hintTgChat:"@userinfobot'tan alın",
                 secInvite:'Davet Kodu', lblInvite:'DAVET KODU', hintInvite:'SmartStay ekibinden aldığınız kod',
                 registerBtn:'Oteli Kaydet →', errRequired:'❌ Lütfen zorunlu alanları doldurun',
                 haveAccount:'Hesabınız var mı?', loginLink:'Giriş Yap',
@@ -296,8 +286,8 @@ REGISTER_HTML = """<!DOCTYPE html>
                 sub:"Mehmonxonangizni ro'yxatdan o'tkazing — 3 daqiqada tayyor",
                 secHotel:"Mehmonxona ma'lumotlari", lblName:'MEHMONXONA NOMI', lblSlug:'URL ID (SLUG)', hintSlug:"Faqat kichik harflar va defislar",
                 lblPwd:'MENEJER PAROLI', lblInfo:"MEHMONXONA HAQIDA MA'LUMOT", hintInfo:"Qancha batafsil bo'lsa, AI shuncha yaxshi javob beradi",
-                secRooms:'Xonalar konfiguratsiyasi', lblCount:'XONALAR SONI', hintCount:'Jami xonalar soni', lblStart:'BIRINCHI XONA RAQAMI', hintStart:'Masalan: 101 yoki 1',
-                secTg:"Telegram bildirishnomalar (ixtiyoriy)", hintTgToken:"@BotFather dan oling", hintTgChat:"@userinfobot dan oling", phInfo:"Mehmonxona ma'lumotlari...", phNewPassword:'Yangi parol',
+                phName:'Masalan: Grand Palace Hotel', phSlug:'masalan: grand-palace', phPwd:'Xavfsiz parol tanlang', phInfoReg:'Basseyn ish vaqti, restoran vaqtlari, spa, telefon raqamlari...',
+                secTg:"Telegram bildirishnomalar (ixtiyoriy)", lblTgToken:'BOT TOKENI', lblTgChat:'CHAT ID', hintTgToken:"@BotFather dan oling", hintTgChat:"@userinfobot dan oling",
                 secInvite:'Taklif kodi', lblInvite:'TAKLIF KODI', hintInvite:'SmartStay jamoasidan olingan kod',
                 registerBtn:"Mehmonxonani ro'yxatdan o'tkazish →", errRequired:"❌ Iltimos, barcha majburiy maydonlarni to'ldiring",
                 haveAccount:"Hisobingiz bormi?", loginLink:'Kirish',
@@ -306,18 +296,24 @@ REGISTER_HTML = """<!DOCTYPE html>
             }
         };
 
-        let lang = localStorage.getItem('ss_lang') || 'en';
+        // Language: saved choice -> browser language -> English
+        let lang = localStorage.getItem('ss_lang') || (navigator.language || 'en').slice(0, 2).toLowerCase();
         if (!I18N[lang]) lang = 'en';
 
         function applyLang() {
             const L = I18N[lang];
             const ids = ['sub','secHotel','lblName','lblSlug','hintSlug','lblPwd','lblInfo','hintInfo',
-                         'secRooms','lblCount','hintCount','lblStart','hintStart','secTg','hintTgToken','hintTgChat',
+                         'secTg','lblTgToken','lblTgChat','hintTgToken','hintTgChat',
                          'secInvite','lblInvite','hintInvite','registerBtn','haveAccount','loginLink',
                          'successTitle','successSub','llGuest','llDash','dashBtn'];
             ids.forEach(id => {
                 const el = document.getElementById(id);
                 if (el && L[id] !== undefined) el.textContent = L[id];
+            });
+            const phMap = {name:'phName', slug:'phSlug', password:'phPwd', info:'phInfoReg'};
+            Object.entries(phMap).forEach(([id, key]) => {
+                const el = document.getElementById(id);
+                if (el && L[key]) el.placeholder = L[key];
             });
             document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent === lang.toUpperCase()));
         }

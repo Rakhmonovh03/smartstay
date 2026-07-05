@@ -129,6 +129,20 @@ def _verified_hotel_slug_cookie(request: Request) -> str:
         return payload.split(":", 1)[1]
     return ""
 
+def _staff_id_from_cookie(request: Request, slug: str) -> int | None:
+    """
+    Return the staff id from a valid signed staff_{slug} cookie, or None.
+    Payload is typed ("staff:{slug}:{id}") so a staff token can never be
+    replayed as an owner/admin token (all cookies share one HMAC key).
+    """
+    payload = _read_signed(request.cookies.get(f"staff_{slug}", ""))
+    if payload and payload.startswith(f"staff:{slug}:"):
+        try:
+            return int(payload.rsplit(":", 1)[1])
+        except ValueError:
+            return None
+    return None
+
 
 # ===== EMAIL HELPER =====
 async def send_email(hotel: dict, subject: str, body_html: str) -> bool:
@@ -349,9 +363,13 @@ def api_hotel_login(data: HotelLoginRequest, request: Request):
 
 # ===== LOGOUT =====
 @app.get("/hotel/{slug}/logout")
-def hotel_logout(slug: str, response: Response):
-    response.delete_cookie(f"auth_{slug}", path="/")
-    return RedirectResponse(f"/hotel/{slug}/login", status_code=302)
+def hotel_logout(slug: str):
+    # NOTE: cookies must be set on the SAME Response object we return —
+    # FastAPI discards changes to the injected `response` param when the
+    # handler returns its own Response (e.g. RedirectResponse).
+    resp = RedirectResponse(f"/hotel/{slug}/login", status_code=302)
+    resp.delete_cookie(f"auth_{slug}", path="/")
+    return resp
 
 # ===== DASHBOARD =====
 @app.get("/hotel/{slug}/dashboard", response_class=HTMLResponse)
@@ -548,8 +566,14 @@ async def hotel_chat_api(request: Request, slug: str, data: ChatRequest):
     message = data.message.strip()
     room = data.room.strip() or "101"
     # history is fully client-supplied — cap it so a client can't run up token
-    # costs (or stuff the context) with an arbitrarily long conversation.
-    history = data.history[-20:] if data.history else []
+    # costs (or stuff the context) with an arbitrarily long conversation, and
+    # sanitize entries: invalid roles/shape would make the Claude API reject
+    # the whole request with a 400.
+    history = [
+        {"role": m["role"], "content": str(m["content"])[:5000]}
+        for m in (data.history[-20:] if data.history else [])
+        if isinstance(m, dict) and m.get("role") in ("user", "assistant") and m.get("content")
+    ]
 
     if not message:
         return JSONResponse({"error": "Empty message"}, status_code=400)
@@ -606,45 +630,38 @@ async def hotel_chat_api(request: Request, slug: str, data: ChatRequest):
                 save_telegram_msg_id(slug, room, msg_id)
         asyncio.create_task(_send_normal_and_map())
 
-    # Email notification (independent of Telegram)
+    # Email notification (independent of Telegram) — localized via notifications.py
     if hotel.get("notify_email") and hotel.get("smtp_host"):
         from datetime import datetime as _dt2
         _ts = _dt2.now().strftime("%H:%M")
+        # Escape guest-supplied values before embedding them in the HTML email.
+        _safe_msg = html.escape(message)
+        _safe_hotel = html.escape(hotel["name"])
         _guest_label = ""
         if guest:
-            _guest_label = f"<br><b>Misafir:</b> {guest['first_name']} {guest['last_name']}"
+            _guest_label = (f"<br><b>{nt(nlang, 'email_lbl_guest')}:</b> "
+                            + html.escape(f"{guest['first_name']} {guest['last_name']}"))
         if priority == "urgent":
-            _email_subject = f"🔴 ACİL — {hotel['name']} Oda {room} [{_ts}]"
-            _email_body = f"""
-<div style="font-family:sans-serif;max-width:600px">
-  <div style="background:#c0392b;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0">
-    <h2 style="margin:0">🔴 ACİL Misafir Mesajı</h2>
-  </div>
-  <div style="border:1px solid #e0e0e0;border-top:none;padding:20px;border-radius:0 0 8px 8px">
-    <p><b>Otel:</b> {hotel['name']}<br>
-       <b>Oda:</b> {room}{_guest_label}<br>
-       <b>Saat:</b> {_ts}</p>
-    <div style="background:#fff3f3;border-left:4px solid #c0392b;padding:12px 16px;border-radius:4px;margin:12px 0">
-      <b>Mesaj:</b><br>{message}
-    </div>
-    <p style="color:#888;font-size:12px">SmartStay AI tarafından gönderildi</p>
-  </div>
-</div>"""
+            _subj_key, _title_key = "email_urgent_subject", "email_urgent_title"
+            _accent, _bg = "#c0392b", "#fff3f3"
         else:
-            _email_subject = f"💬 Yeni Mesaj — {hotel['name']} Oda {room} [{_ts}]"
-            _email_body = f"""
+            _subj_key, _title_key = "email_new_subject", "email_new_title"
+            _accent, _bg = "#C9A84C", "#fafaf5"
+        _email_subject = nt(nlang, _subj_key, _esc=False,
+                            hotel=hotel["name"], room=room, time=_ts)
+        _email_body = f"""
 <div style="font-family:sans-serif;max-width:600px">
-  <div style="background:#C9A84C;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0">
-    <h2 style="margin:0">💬 Yeni Misafir Mesajı</h2>
+  <div style="background:{_accent};color:#fff;padding:16px 20px;border-radius:8px 8px 0 0">
+    <h2 style="margin:0">{nt(nlang, _title_key)}</h2>
   </div>
   <div style="border:1px solid #e0e0e0;border-top:none;padding:20px;border-radius:0 0 8px 8px">
-    <p><b>Otel:</b> {hotel['name']}<br>
-       <b>Oda:</b> {room}{_guest_label}<br>
-       <b>Saat:</b> {_ts}</p>
-    <div style="background:#fafaf5;border-left:4px solid #C9A84C;padding:12px 16px;border-radius:4px;margin:12px 0">
-      <b>Mesaj:</b><br>{message}
+    <p><b>{nt(nlang, 'email_lbl_hotel')}:</b> {_safe_hotel}<br>
+       <b>{nt(nlang, 'email_lbl_room')}:</b> {room}{_guest_label}<br>
+       <b>{nt(nlang, 'email_lbl_time')}:</b> {_ts}</p>
+    <div style="background:{_bg};border-left:4px solid {_accent};padding:12px 16px;border-radius:4px;margin:12px 0">
+      <b>{nt(nlang, 'email_lbl_msg')}:</b><br>{_safe_msg}
     </div>
-    <p style="color:#888;font-size:12px">SmartStay AI tarafından gönderildi</p>
+    <p style="color:#888;font-size:12px">{nt(nlang, 'email_footer')}</p>
   </div>
 </div>"""
         asyncio.create_task(send_email(hotel, _email_subject, _email_body))
@@ -795,7 +812,14 @@ async def api_checkin(request: Request, slug: str, data: CheckinRequest):
     # it to a safe token (alphanumeric, max 20) to prevent stored XSS / injection.
     if not data.room.strip().isalnum() or len(data.room.strip()) > 20:
         return JSONResponse({"ok": False, "error": "Geçersiz oda numarası"})
-    if data.check_out <= data.check_in:
+    # Dates are guest-supplied strings — validate ISO format now, otherwise
+    # later date parsing (welcome message, digest, auto-checkout) breaks silently.
+    try:
+        ci_date = date.fromisoformat(data.check_in)
+        co_date = date.fromisoformat(data.check_out)
+    except ValueError:
+        return JSONResponse({"ok": False, "error": "Geçersiz tarih formatı (YYYY-MM-DD)"})
+    if co_date <= ci_date:
         return JSONResponse({"ok": False, "error": "Çıkış tarihi giriş tarihinden sonra olmalı"})
 
     # Claude validation — quick sanity check
@@ -1889,14 +1913,10 @@ def staff_chat_send(slug: str, channel: str, body: StaffChatMessage, request: Re
         sender = "Менеджер"
         role_label = "manager"
     else:
-        staff_id_str = _read_signed(request.cookies.get(f"staff_{slug}", "")) or ""
-        try:
-            staff = get_staff_by_id(slug, int(staff_id_str))
-            sender = staff["name"] if staff else "Персонал"
-            role_label = staff["role"] if staff else role
-        except Exception:
-            sender = "Персонал"
-            role_label = role
+        staff_id = _staff_id_from_cookie(request, slug)
+        staff = get_staff_by_id(slug, staff_id) if staff_id is not None else None
+        sender = staff["name"] if staff else "Персонал"
+        role_label = staff["role"] if staff else role
 
     msg_id = save_staff_msg(slug, channel, sender, role_label, text)
     return {"ok": True, "id": msg_id}
@@ -1983,49 +2003,52 @@ async def cron_daily_digest(secret: str = "", request: Request = None):
                     chat_id=hotel["telegram_chat_id"]
                 )
 
-        # ─── Email digest ──────────────────────────────────────────
+        # ─── Email digest (localized via notifications.py) ─────────
         if has_email:
-            checkouts_rows = "".join(
-                f"<tr><td style='padding:6px 12px'>{g['room']}</td><td style='padding:6px 12px'>{g['name']}</td></tr>"
-                for g in d["checkouts_today"]
-            ) or "<tr><td colspan='2' style='padding:6px 12px;color:#888'>Bugün çıkış yok</td></tr>"
+            stat_lines = [
+                nt(nlang, "digest_active",   n=d['active_guests']),
+                nt(nlang, "digest_checkin",  n=d['checkins_today']),
+                nt(nlang, "digest_checkout", n=len(d['checkouts_today'])),
+                nt(nlang, "digest_unread",   n=d['unread_messages']),
+                nt(nlang, "digest_rating",   r=rating_str),
+            ]
+            stats_html = "".join(
+                f"<tr style='background:{'#f5f5f5' if i % 2 == 0 else '#ffffff'}'>"
+                f"<td style='padding:10px 14px;font-size:15px'>{line}</td></tr>"
+                for i, line in enumerate(stat_lines)
+            )
+
+            checkouts_table = ""
+            if d["checkouts_today"]:
+                checkouts_rows = "".join(
+                    f"<tr><td style='padding:6px 12px'>{html.escape(str(g['room']))}</td>"
+                    f"<td style='padding:6px 12px'>{html.escape(str(g['name']))}</td></tr>"
+                    for g in d["checkouts_today"]
+                )
+                checkouts_table = (
+                    f"<h3 style='margin-bottom:8px'>{nt(nlang, 'email_checkouts_header')}</h3>"
+                    "<table style='width:100%;border-collapse:collapse;border:1px solid #e0e0e0;border-radius:6px'>"
+                    "<thead><tr style='background:#f5f5f5'>"
+                    f"<th style='padding:8px 12px;text-align:left'>{nt(nlang, 'email_lbl_room')}</th>"
+                    f"<th style='padding:8px 12px;text-align:left'>{nt(nlang, 'email_lbl_guest')}</th>"
+                    "</tr></thead><tbody>" + checkouts_rows + "</tbody></table>"
+                )
 
             email_html = f"""
 <div style="font-family:sans-serif;max-width:640px;margin:0 auto">
   <div style="background:#0a0a0a;color:#C9A84C;padding:20px 24px;border-radius:8px 8px 0 0">
-    <h2 style="margin:0">☀️ Günlük Özet — {today_str}</h2>
-    <p style="margin:4px 0 0;color:#aaa;font-size:14px">{hotel['name']}</p>
+    <h2 style="margin:0">{nt(nlang, "digest_title", date=today_str)}</h2>
+    <p style="margin:4px 0 0;color:#aaa;font-size:14px">{html.escape(hotel['name'])}</p>
   </div>
   <div style="border:1px solid #e0e0e0;border-top:none;padding:24px;border-radius:0 0 8px 8px">
-    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
-      <tr style="background:#f5f5f5">
-        <td style="padding:10px 14px;font-weight:bold">🛎️ Aktif misafir</td>
-        <td style="padding:10px 14px;font-size:20px;font-weight:bold;color:#C9A84C">{d['active_guests']}</td>
-      </tr>
-      <tr>
-        <td style="padding:10px 14px;font-weight:bold">📥 Bugün check-in</td>
-        <td style="padding:10px 14px;font-size:20px;font-weight:bold;color:#27ae60">{d['checkins_today']}</td>
-      </tr>
-      <tr style="background:#f5f5f5">
-        <td style="padding:10px 14px;font-weight:bold">📤 Bugün check-out</td>
-        <td style="padding:10px 14px;font-size:20px;font-weight:bold;color:#e74c3c">{len(d['checkouts_today'])}</td>
-      </tr>
-      <tr>
-        <td style="padding:10px 14px;font-weight:bold">📬 Okunmamış mesaj</td>
-        <td style="padding:10px 14px;font-size:20px;font-weight:bold">{d['unread_messages']}</td>
-      </tr>
-      <tr style="background:#f5f5f5">
-        <td style="padding:10px 14px;font-weight:bold">⭐ Ortalama puan</td>
-        <td style="padding:10px 14px">{rating_str}</td>
-      </tr>
-    </table>
-
-    {'<h3 style="margin-bottom:8px">📤 Bugün Check-out Yapacaklar</h3><table style="width:100%;border-collapse:collapse;border:1px solid #e0e0e0;border-radius:6px"><thead><tr style="background:#f5f5f5"><th style="padding:8px 12px;text-align:left">Oda</th><th style="padding:8px 12px;text-align:left">Misafir</th></tr></thead><tbody>' + checkouts_rows + '</tbody></table>' if d['checkouts_today'] else ''}
-
-    <p style="color:#aaa;font-size:12px;margin-top:20px">SmartStay AI tarafından gönderildi</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">{stats_html}</table>
+    {checkouts_table}
+    <p style="color:#aaa;font-size:12px;margin-top:20px">{nt(nlang, "email_footer")}</p>
   </div>
 </div>"""
-            ok = await send_email(hotel, f"☀️ Günlük Özet — {hotel['name']} ({today_str})", email_html)
+            subj = nt(nlang, "email_digest_subject", _esc=False,
+                      hotel=hotel["name"], date=today_str)
+            ok = await send_email(hotel, subj, email_html)
             if ok:
                 emails_sent += 1
 
@@ -2131,9 +2154,10 @@ def admin_panel(request: Request):
     return get_admin_html()
 
 @app.get("/admin/logout")
-def admin_logout(response: Response):
-    response.delete_cookie("admin_auth")
-    return RedirectResponse("/admin/login")
+def admin_logout():
+    resp = RedirectResponse("/admin/login")
+    resp.delete_cookie("admin_auth")
+    return resp
 
 class PlanUpdateRequest(BaseModel):
     plan: str
@@ -2300,11 +2324,11 @@ def api_admin_hotels(request: Request):
 
 def get_auth_owner(request: Request) -> dict | None:
     """Return owner dict if owner_session cookie is valid, else None."""
-    owner_id_str = _read_signed(request.cookies.get("owner_session", ""))
-    if not owner_id_str:
+    payload = _read_signed(request.cookies.get("owner_session", ""))
+    if not payload or not payload.startswith("owner:"):
         return None
     try:
-        return get_owner_by_id(int(owner_id_str))
+        return get_owner_by_id(int(payload.split(":", 1)[1]))
     except Exception:
         return None
 
@@ -2325,11 +2349,12 @@ def owner_login_page():
     return get_owner_login_html()
 
 @app.post("/api/owner/login")
-def api_owner_login(data: OwnerLoginRequest, response: Response):
+@limiter.limit("5/minute")
+def api_owner_login(data: OwnerLoginRequest, request: Request, response: Response):
     owner = get_owner_by_email(data.email)
     if not owner or not verify_password(data.password, owner["password_hash"]):
         return JSONResponse({"ok": False, "error": "Неверный email или пароль"}, status_code=401)
-    response.set_cookie("owner_session", _make_signed(str(owner["id"])), max_age=86400 * 30,
+    response.set_cookie("owner_session", _make_signed(f"owner:{owner['id']}"), max_age=86400 * 30,
                         httponly=True, secure=SECURE_COOKIES, samesite="strict")
     return {"ok": True}
 
@@ -2342,13 +2367,14 @@ def owner_dashboard(request: Request):
     return get_owner_dashboard_html(owner, hotels)
 
 @app.get("/owner/logout")
-def owner_logout(response: Response):
-    response.delete_cookie("owner_session")
-    return RedirectResponse("/owner/login")
+def owner_logout():
+    resp = RedirectResponse("/owner/login")
+    resp.delete_cookie("owner_session")
+    return resp
 
 # Owner impersonate hotel — set manager cookie and redirect to dashboard
 @app.get("/owner/enter/{slug}")
-def owner_enter_hotel(slug: str, request: Request, response: Response):
+def owner_enter_hotel(slug: str, request: Request):
     owner = get_auth_owner(request)
     if not owner:
         return RedirectResponse("/owner/login")
@@ -2356,9 +2382,12 @@ def owner_enter_hotel(slug: str, request: Request, response: Response):
     hotel_owner_ids = get_hotel_owner_ids(slug)
     if owner["id"] not in hotel_owner_ids:
         return JSONResponse({"error": "Нет доступа к этому отелю"}, status_code=403)
-    response.set_cookie(f"auth_{slug}", _make_signed(f"hotel:{slug}"), max_age=86400,
-                        httponly=True, secure=SECURE_COOKIES, samesite="strict")
-    return RedirectResponse(f"/hotel/{slug}/dashboard")
+    # Cookie must be set on the returned response (injected `response` is ignored
+    # when a Response object is returned directly).
+    resp = RedirectResponse(f"/hotel/{slug}/dashboard")
+    resp.set_cookie(f"auth_{slug}", _make_signed(f"hotel:{slug}"), max_age=86400,
+                    httponly=True, secure=SECURE_COOKIES, samesite="lax", path="/")
+    return resp
 
 @app.get("/api/owner/hotels")
 def api_owner_hotels(request: Request):
@@ -2420,15 +2449,16 @@ def api_admin_remove_hotel(owner_id: int, slug: str, request: Request):
 
 # Admin impersonate hotel manager (no password needed)
 @app.get("/api/admin/hotel/{slug}/impersonate")
-def api_admin_impersonate(slug: str, request: Request, response: Response):
+def api_admin_impersonate(slug: str, request: Request):
     if not _is_admin(request):
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
     hotel = get_hotel(slug)
     if not hotel:
         return JSONResponse({"error": "Not found"}, status_code=404)
-    response.set_cookie(f"auth_{slug}", _make_signed(f"hotel:{slug}"), max_age=3600,
-                        httponly=True, secure=SECURE_COOKIES, samesite="strict")
-    return RedirectResponse(f"/hotel/{slug}/dashboard")
+    resp = RedirectResponse(f"/hotel/{slug}/dashboard")
+    resp.set_cookie(f"auth_{slug}", _make_signed(f"hotel:{slug}"), max_age=3600,
+                    httponly=True, secure=SECURE_COOKIES, samesite="lax", path="/")
+    return resp
 
 
 # ===== STAFF AUTH HELPERS =====
@@ -2442,14 +2472,11 @@ def get_auth_role(request: Request, slug: str) -> tuple[bool, str]:
     """
     if _read_signed(request.cookies.get(f"auth_{slug}", "")) == f"hotel:{slug}":
         return True, "manager"
-    staff_id_str = _read_signed(request.cookies.get(f"staff_{slug}", ""))
-    if staff_id_str:
-        try:
-            staff = get_staff_by_id(slug, int(staff_id_str))
-            if staff and staff["is_active"]:
-                return True, staff["role"]
-        except (ValueError, TypeError):
-            pass
+    staff_id = _staff_id_from_cookie(request, slug)
+    if staff_id is not None:
+        staff = get_staff_by_id(slug, staff_id)
+        if staff and staff["is_active"]:
+            return True, staff["role"]
     return False, ""
 
 
@@ -2482,7 +2509,7 @@ def staff_login(slug: str, data: StaffLoginRequest, request: Request, response: 
         return JSONResponse({"error": "Geçersiz kullanıcı adı veya şifre"}, status_code=401)
     response.set_cookie(
         key=f"staff_{slug}",
-        value=_make_signed(str(staff["id"])),
+        value=_make_signed(f"staff:{slug}:{staff['id']}"),
         httponly=True,
         secure=SECURE_COOKIES,
         samesite="lax",
@@ -2501,9 +2528,11 @@ def staff_login(slug: str, data: StaffLoginRequest, request: Request, response: 
 
 
 @app.get("/api/hotel/{slug}/staff/logout")
-def staff_logout(slug: str, response: Response):
-    response.delete_cookie(f"staff_{slug}")
-    return RedirectResponse(f"/hotel/{slug}/staff/login")
+def staff_logout(slug: str):
+    resp = RedirectResponse(f"/hotel/{slug}/staff/login")
+    resp.delete_cookie(f"staff_{slug}")
+    resp.delete_cookie("hotel_slug")  # set at staff login — clear it too
+    return resp
 
 
 @app.get("/api/hotel/{slug}/me")
@@ -2515,12 +2544,9 @@ def hotel_me(slug: str, request: Request):
     if role == "manager":
         name = get_hotel(slug)["name"] + " Yöneticisi"
     else:
-        staff_id_str = _read_signed(request.cookies.get(f"staff_{slug}", "")) or ""
-        try:
-            staff = get_staff_by_id(slug, int(staff_id_str))
-            name = staff["name"] if staff else "Personel"
-        except Exception:
-            name = "Personel"
+        staff_id = _staff_id_from_cookie(request, slug)
+        staff = get_staff_by_id(slug, staff_id) if staff_id is not None else None
+        name = staff["name"] if staff else "Personel"
     return {"ok": True, "role": role, "name": name}
 
 

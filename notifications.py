@@ -51,6 +51,20 @@ NOTIF_I18N = {
         "digest_rating": "⭐ Average rating: <b>{r}</b>",
         "rating_none": "— no reviews",
         "reviews_word": "reviews",
+        # Email notifications
+        "email_urgent_subject": "🔴 URGENT — {hotel} Room {room} [{time}]",
+        "email_new_subject": "💬 New message — {hotel} Room {room} [{time}]",
+        "email_urgent_title": "🔴 URGENT guest message",
+        "email_new_title": "💬 New guest message",
+        "email_lbl_hotel": "Hotel",
+        "email_lbl_room": "Room",
+        "email_lbl_time": "Time",
+        "email_lbl_guest": "Guest",
+        "email_lbl_msg": "Message",
+        "email_digest_subject": "☀️ Daily summary — {hotel} ({date})",
+        "email_checkouts_header": "📤 Checking out today",
+        "email_no_checkouts": "No check-outs today",
+        "email_footer": "Sent by SmartStay AI",
     },
     "ru": {
         "checkin": ("🏨 <b>Новый заезд!</b>\n"
@@ -90,6 +104,20 @@ NOTIF_I18N = {
         "digest_rating": "⭐ Средняя оценка: <b>{r}</b>",
         "rating_none": "— отзывов нет",
         "reviews_word": "отзывов",
+        # Email notifications
+        "email_urgent_subject": "🔴 СРОЧНО — {hotel} Номер {room} [{time}]",
+        "email_new_subject": "💬 Новое сообщение — {hotel} Номер {room} [{time}]",
+        "email_urgent_title": "🔴 СРОЧНОЕ сообщение гостя",
+        "email_new_title": "💬 Новое сообщение гостя",
+        "email_lbl_hotel": "Отель",
+        "email_lbl_room": "Номер",
+        "email_lbl_time": "Время",
+        "email_lbl_guest": "Гость",
+        "email_lbl_msg": "Сообщение",
+        "email_digest_subject": "☀️ Ежедневная сводка — {hotel} ({date})",
+        "email_checkouts_header": "📤 Выезжают сегодня",
+        "email_no_checkouts": "Сегодня выездов нет",
+        "email_footer": "Отправлено SmartStay AI",
     },
     "tr": {
         "checkin": ("🏨 <b>Yeni Check-in!</b>\n"
@@ -129,6 +157,20 @@ NOTIF_I18N = {
         "digest_rating": "⭐ Ortalama puan: <b>{r}</b>",
         "rating_none": "— yorum yok",
         "reviews_word": "yorum",
+        # Email notifications
+        "email_urgent_subject": "🔴 ACİL — {hotel} Oda {room} [{time}]",
+        "email_new_subject": "💬 Yeni Mesaj — {hotel} Oda {room} [{time}]",
+        "email_urgent_title": "🔴 ACİL Misafir Mesajı",
+        "email_new_title": "💬 Yeni Misafir Mesajı",
+        "email_lbl_hotel": "Otel",
+        "email_lbl_room": "Oda",
+        "email_lbl_time": "Saat",
+        "email_lbl_guest": "Misafir",
+        "email_lbl_msg": "Mesaj",
+        "email_digest_subject": "☀️ Günlük Özet — {hotel} ({date})",
+        "email_checkouts_header": "📤 Bugün Check-out Yapacaklar",
+        "email_no_checkouts": "Bugün çıkış yok",
+        "email_footer": "SmartStay AI tarafından gönderildi",
     },
     "uz": {
         "checkin": ("🏨 <b>Yangi check-in!</b>\n"
@@ -168,6 +210,20 @@ NOTIF_I18N = {
         "digest_rating": "⭐ O‘rtacha baho: <b>{r}</b>",
         "rating_none": "— sharhlar yo‘q",
         "reviews_word": "sharh",
+        # Email notifications
+        "email_urgent_subject": "🔴 SHOSHILINCH — {hotel} Xona {room} [{time}]",
+        "email_new_subject": "💬 Yangi xabar — {hotel} Xona {room} [{time}]",
+        "email_urgent_title": "🔴 SHOSHILINCH mehmon xabari",
+        "email_new_title": "💬 Yangi mehmon xabari",
+        "email_lbl_hotel": "Mehmonxona",
+        "email_lbl_room": "Xona",
+        "email_lbl_time": "Vaqt",
+        "email_lbl_guest": "Mehmon",
+        "email_lbl_msg": "Xabar",
+        "email_digest_subject": "☀️ Kunlik hisobot — {hotel} ({date})",
+        "email_checkouts_header": "📤 Bugun chiqib ketadiganlar",
+        "email_no_checkouts": "Bugun chiqish yo‘q",
+        "email_footer": "SmartStay AI tomonidan yuborildi",
     },
 }
 
@@ -178,10 +234,20 @@ def notif_lang(hotel: dict) -> str:
     return lang if lang in NOTIF_I18N else "en"
 
 
-def nt(lang: str, key: str, **kw) -> str:
-    """Return a localized notification string, formatted with kw."""
+def nt(lang: str, key: str, _esc: bool = True, **kw) -> str:
+    """
+    Return a localized notification string, formatted with kw.
+
+    Values are HTML-escaped by default: the templates go to Telegram
+    (parse_mode=HTML) and HTML emails, so an unescaped guest message with "<"
+    would break the Telegram API call (and allows HTML injection).
+    Pass _esc=False for plain-text contexts (e.g. email subjects).
+    """
+    import html as _html
     table = NOTIF_I18N.get(lang, NOTIF_I18N["en"])
     template = table.get(key) or NOTIF_I18N["en"].get(key, "")
+    if _esc:
+        kw = {k: _html.escape(str(v), quote=False) for k, v in kw.items()}
     try:
         return template.format(**kw)
     except (KeyError, IndexError):
