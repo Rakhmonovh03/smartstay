@@ -471,9 +471,7 @@ EDIT_HTML = """
                 <div style="font-size:13px;color:#ccc;margin-bottom:4px;font-weight:600" id="editTgWebhookTitle">Telegram Webhook</div>
                 <div style="font-size:12px;color:#555;line-height:1.6" id="editTgWebhookDesc">Bot token kayıt edildikten sonra webhook'u etkinleştirin.<br>Misafire gelen mesajlara Telegram'dan yanıt verebilirsiniz.</div>
             </div>
-            <button class="btn" style="width:auto;padding:11px 20px;margin:0;font-size:13px" onclick="setupWebhook()" id="webhookBtn">
-                🔗 Webhook Kur
-            </button>
+            <button class="btn" style="width:auto;padding:11px 20px;margin:0;font-size:13px" onclick="setupWebhook()" id="webhookBtn">🔗 Webhook Kur</button>
         </div>
         <div id="webhookResult" style="font-size:12px;margin-top:8px;display:none"></div>
 
@@ -517,7 +515,7 @@ EDIT_HTML = """
                 <option value="cs">🇨🇿 Čeština</option>
                 <option value="hu">🇭🇺 Magyar</option>
             </select>
-            <div class="hint">Otomatik: AI misafirin yazdığı dili algılar ve o dilde yanıt verir</div>
+            <div class="hint" id="editHintAutoLang">Otomatik: AI misafirin yazdığı dili algılar ve o dilde yanıt verir</div>
         </div>
         <div class="field">
             <label id="editLblSupportedLangs">DESTEKLENECEĞİ DİLLER (virgülle ayırın)</label>
@@ -526,7 +524,7 @@ EDIT_HTML = """
 
         <div class="section-title" id="editSecEmail">📧 E-posta Bildirimleri (SMTP)</div>
         <div class="field">
-            <label>SMTP SUNUCU</label>
+            <label id="editLblSmtpHost">SMTP SUNUCU</label>
             <input type="text" id="smtp_host" placeholder="smtp.gmail.com">
             <div class="hint">Gmail: smtp.gmail.com · Outlook: smtp-mail.outlook.com · SendGrid: smtp.sendgrid.net</div>
         </div>
@@ -572,7 +570,7 @@ EDIT_HTML = """
             <!-- Current plan -->
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
                 <div>
-                    <div style="font-size:12px;color:#888;margin-bottom:4px">AKTİF PLAN</div>
+                    <div style="font-size:12px;color:#888;margin-bottom:4px" id="bilActivePlan">AKTİF PLAN</div>
                     <div id="planNameEl" style="font-size:20px;font-weight:700;color:#C9A84C">Yükleniyor...</div>
                     <div id="stripeStatusEl" style="font-size:12px;color:#666;margin-top:2px"></div>
                 </div>
@@ -591,8 +589,7 @@ EDIT_HTML = """
             <!-- Stripe not configured notice -->
             <div id="stripeNotConfigured" style="display:none;margin-top:12px;padding:12px;
                  background:#1a1a1a;border-radius:8px;font-size:13px;color:#888;text-align:center">
-                💡 Stripe henüz yapılandırılmadı. <code>STRIPE_SECRET_KEY</code> ve fiyat ID'lerini
-                <code>.env</code> dosyasına ekleyin.
+                <span id="bilStripeNotice">💡 Stripe henüz yapılandırılmadı. STRIPE_SECRET_KEY ve fiyat ID'lerini .env dosyasına ekleyin.</span>
             </div>
         </div>
 
@@ -656,10 +653,16 @@ EDIT_HTML = """
             window.open('/hotel/' + slug + '/widget', '_blank', 'width=400,height=640');
         }
 
+        function ET(k) {
+            const lang = localStorage.getItem('ss_lang') || 'en';
+            const L = EDIT_I18N[lang] || EDIT_I18N.en;
+            return (L[k] !== undefined ? L[k] : (EDIT_I18N.en[k] !== undefined ? EDIT_I18N.en[k] : k));
+        }
+
         async function setupWebhook() {
             const btn = document.getElementById('webhookBtn');
             const res = document.getElementById('webhookResult');
-            btn.textContent = '⏳ Kuruluyor...';
+            btn.textContent = ET('whSetting');
             btn.disabled = true;
             try {
                 const r = await fetch('/api/hotel/' + slug + '/telegram/set-webhook', {credentials:'include'});
@@ -667,41 +670,43 @@ EDIT_HTML = """
                 res.style.display = 'block';
                 if (data.ok) {
                     res.style.color = '#4CAF50';
-                    res.textContent = '✅ Webhook kuruldu! URL: ' + data.webhook_url;
-                    btn.textContent = '✅ Aktif';
+                    res.textContent = ET('whDone') + data.webhook_url;
+                    btn.textContent = ET('whActive');
                 } else {
                     res.style.color = '#E05555';
                     res.textContent = '❌ ' + (data.error || JSON.stringify(data));
-                    btn.textContent = '🔗 Webhook Kur';
+                    btn.textContent = ET('webhookBtn');
                     btn.disabled = false;
                 }
             } catch(e) {
                 res.style.display = 'block';
                 res.style.color = '#E05555';
-                res.textContent = '❌ Bağlantı hatası';
-                btn.textContent = '🔗 Webhook Kur';
+                res.textContent = ET('whConnErr');
+                btn.textContent = ET('webhookBtn');
                 btn.disabled = false;
             }
         }
 
         // ===== BILLING =====
-        const PLAN_DETAILS = {
-            starter: { label: '⭐ Starter', price: '$299/ay', features: ['2 000 mesaj/ay', 'Telegram + Email', 'Misafir takibi', 'Talep yönetimi'] },
-            pro:     { label: '🚀 Pro',     price: '$599/ay', features: ['10 000 mesaj/ay', 'Tüm özellikler', 'Multi-personel', 'Analitik'] },
-            premium: { label: '🏆 Premium', price: '$999/ay', features: ['Sınırsız mesaj', 'Öncelikli destek', 'Özel AI eğitimi', 'SLA garantisi'] },
-        };
+        function planDetails() {
+            return {
+                starter: { label: '⭐ Starter', price: '$299' + ET('bilPerMonth'), features: ET('featStarter') },
+                pro:     { label: '🚀 Pro',     price: '$599' + ET('bilPerMonth'), features: ET('featPro') },
+                premium: { label: '🏆 Premium', price: '$999' + ET('bilPerMonth'), features: ET('featPremium') },
+            };
+        }
 
         async function loadBilling() {
             try {
                 const d = await fetch('/api/hotel/' + slug + '/billing/info', {credentials:'include'}).then(r => r.json());
                 const currentPlan = d.plan || 'trial';
-                const planLabels = { trial: 'Deneme (Trial)', starter: 'Starter', pro: 'Pro', premium: 'Premium' };
+                const planLabels = { trial: ET('bilTrial'), starter: 'Starter', pro: 'Pro', premium: 'Premium' };
                 document.getElementById('planNameEl').textContent = planLabels[currentPlan] || currentPlan;
 
                 const statusEl = document.getElementById('stripeStatusEl');
-                if (d.stripe_status === 'active')   { statusEl.textContent = '✅ Aktif abonelik'; statusEl.style.color = '#4caf50'; }
-                else if (d.stripe_status === 'past_due') { statusEl.textContent = '⚠️ Ödeme gecikmiş'; statusEl.style.color = '#E8A040'; }
-                else if (d.stripe_status === 'canceled') { statusEl.textContent = '❌ İptal edildi'; statusEl.style.color = '#e05555'; }
+                if (d.stripe_status === 'active')   { statusEl.textContent = ET('bilStActive'); statusEl.style.color = '#4caf50'; }
+                else if (d.stripe_status === 'past_due') { statusEl.textContent = ET('bilStPastDue'); statusEl.style.color = '#E8A040'; }
+                else if (d.stripe_status === 'canceled') { statusEl.textContent = ET('bilStCanceled'); statusEl.style.color = '#e05555'; }
 
                 if (d.has_subscription) document.getElementById('manageSubBtn').style.display = 'block';
 
@@ -710,7 +715,7 @@ EDIT_HTML = """
                 }
 
                 const cards = document.getElementById('planCards');
-                cards.innerHTML = Object.entries(PLAN_DETAILS).map(([key, info]) => {
+                cards.innerHTML = Object.entries(planDetails()).map(([key, info]) => {
                     const isCurrent = currentPlan === key;
                     const priceId = d.prices[key];
                     return `<div style="background:${isCurrent ? '#1e1a0e' : '#1a1a1a'};border:1px solid ${isCurrent ? '#C9A84C' : '#2a2a2a'};
@@ -721,14 +726,14 @@ EDIT_HTML = """
                             ${info.features.map(f => `<li>✓ ${f}</li>`).join('')}
                         </ul>
                         ${isCurrent
-                            ? '<div style="background:#C9A84C;color:#000;border-radius:6px;padding:6px;font-size:12px;font-weight:700">Mevcut Plan</div>'
+                            ? '<div style="background:#C9A84C;color:#000;border-radius:6px;padding:6px;font-size:12px;font-weight:700">' + ET('bilCurrent') + '</div>'
                             : priceId
                                 ? `<button onclick="upgradePlan('${priceId}')"
                                           style="width:100%;padding:8px;background:#C9A84C;color:#000;border:none;border-radius:6px;
                                                  font-weight:700;cursor:pointer;font-size:13px">
-                                       Geç →
+                                       ${ET('bilChoose')}
                                    </button>`
-                                : '<div style="color:#555;font-size:12px">Yapılandırılmadı</div>'
+                                : '<div style="color:#555;font-size:12px">' + ET('bilNotConfigured') + '</div>'
                         }
                     </div>`;
                 }).join('');
@@ -748,10 +753,10 @@ EDIT_HTML = """
                 if (d.checkout_url) {
                     window.location.href = d.checkout_url;
                 } else {
-                    alert('❌ ' + (d.error || 'Checkout başarısız'));
+                    alert('❌ ' + (d.error || ET('bilCheckoutFail')));
                 }
             } catch(e) {
-                alert('❌ Bağlantı hatası');
+                alert(ET('whConnErr'));
             }
         }
 
@@ -810,6 +815,15 @@ EDIT_HTML = """
                 editCopyBtn:'📋 Copy code', editPreviewBtn:'👁️ Widget preview',
                 editSaveBtn:'💾 Save', success:'✅ Saved!',
                 hintTgToken:'Get from @BotFather', hintTgChat:'Get from @userinfobot', phInfo:'Hotel information...', phNewPassword:'New password',
+                webhookBtn:'🔗 Set up Webhook', whSetting:'⏳ Setting up...', whDone:'✅ Webhook set! URL: ', whActive:'✅ Active', whConnErr:'❌ Connection error',
+                editHintAutoLang:'Auto: AI detects the guest language and replies in it', editLblSmtpHost:'SMTP SERVER',
+                bilActivePlan:'ACTIVE PLAN', manageSubBtn:'⚙️ Manage Subscription', bilTrial:'Trial', bilCurrent:'Current Plan',
+                bilChoose:'Upgrade →', bilNotConfigured:'Not configured', bilPerMonth:'/mo', bilCheckoutFail:'Checkout failed',
+                bilStripeNotice:'💡 Stripe is not configured yet. Add STRIPE_SECRET_KEY and price IDs to the .env file.',
+                bilStActive:'✅ Active subscription', bilStPastDue:'⚠️ Payment overdue', bilStCanceled:'❌ Canceled',
+                featStarter:['2,000 messages/mo','Telegram + Email','Guest tracking','Request management'],
+                featPro:['10,000 messages/mo','All features','Multi-staff','Analytics'],
+                featPremium:['Unlimited messages','Priority support','Custom AI training','SLA guarantee'],
             },
             ru: {
                 editBack:'← Назад', editSub:'Редактировать настройки отеля',
@@ -835,6 +849,15 @@ EDIT_HTML = """
                 editCopyBtn:'📋 Скопировать код', editPreviewBtn:'👁️ Превью виджета',
                 editSaveBtn:'💾 Сохранить', success:'✅ Сохранено!',
                 hintTgToken:'Получить у @BotFather', hintTgChat:'Получить у @userinfobot', phInfo:'Информация об отеле...', phNewPassword:'Новый пароль',
+                webhookBtn:'🔗 Подключить вебхук', whSetting:'⏳ Подключаю...', whDone:'✅ Вебхук подключён! URL: ', whActive:'✅ Активен', whConnErr:'❌ Ошибка соединения',
+                editHintAutoLang:'Авто: AI определяет язык гостя и отвечает на нём', editLblSmtpHost:'SMTP СЕРВЕР',
+                bilActivePlan:'АКТИВНЫЙ ПЛАН', manageSubBtn:'⚙️ Управление подпиской', bilTrial:'Пробный (Trial)', bilCurrent:'Текущий план',
+                bilChoose:'Перейти →', bilNotConfigured:'Не настроено', bilPerMonth:'/мес', bilCheckoutFail:'Не удалось открыть оплату',
+                bilStripeNotice:'💡 Stripe ещё не настроен. Добавьте STRIPE_SECRET_KEY и ID цен в файл .env.',
+                bilStActive:'✅ Подписка активна', bilStPastDue:'⚠️ Платёж просрочен', bilStCanceled:'❌ Отменена',
+                featStarter:['2 000 сообщений/мес','Telegram + Email','Учёт гостей','Управление заявками'],
+                featPro:['10 000 сообщений/мес','Все функции','Мультиперсонал','Аналитика'],
+                featPremium:['Безлимит сообщений','Приоритетная поддержка','Кастомное обучение AI','Гарантия SLA'],
             },
             tr: {
                 editBack:'← Panele Dön', editSub:'Otel ayarlarını düzenle',
@@ -860,6 +883,15 @@ EDIT_HTML = """
                 editCopyBtn:'📋 Kodu kopyala', editPreviewBtn:'👁️ Widget önizleme',
                 editSaveBtn:'💾 Kaydet', success:'✅ Kaydedildi!',
                 hintTgToken:"@BotFather'dan alın", hintTgChat:"@userinfobot'tan alın", phInfo:'Otel bilgileri...', phNewPassword:'Yeni şifre',
+                webhookBtn:'🔗 Webhook Kur', whSetting:'⏳ Kuruluyor...', whDone:'✅ Webhook kuruldu! URL: ', whActive:'✅ Aktif', whConnErr:'❌ Bağlantı hatası',
+                editHintAutoLang:'Otomatik: AI misafirin yazdığı dili algılar ve o dilde yanıt verir', editLblSmtpHost:'SMTP SUNUCU',
+                bilActivePlan:'AKTİF PLAN', manageSubBtn:'⚙️ Aboneliği Yönet', bilTrial:'Deneme (Trial)', bilCurrent:'Mevcut Plan',
+                bilChoose:'Geç →', bilNotConfigured:'Yapılandırılmadı', bilPerMonth:'/ay', bilCheckoutFail:'Checkout başarısız',
+                bilStripeNotice:"💡 Stripe henüz yapılandırılmadı. STRIPE_SECRET_KEY ve fiyat ID'lerini .env dosyasına ekleyin.",
+                bilStActive:'✅ Aktif abonelik', bilStPastDue:'⚠️ Ödeme gecikmiş', bilStCanceled:'❌ İptal edildi',
+                featStarter:['2 000 mesaj/ay','Telegram + Email','Misafir takibi','Talep yönetimi'],
+                featPro:['10 000 mesaj/ay','Tüm özellikler','Multi-personel','Analitik'],
+                featPremium:['Sınırsız mesaj','Öncelikli destek','Özel AI eğitimi','SLA garantisi'],
             },
             uz: {
                 editBack:'← Panelga qaytish', editSub:"Mehmonxona sozlamalarini tahrirlash",
@@ -885,6 +917,15 @@ EDIT_HTML = """
                 editCopyBtn:"📋 Kodni nusxalash", editPreviewBtn:"👁️ Vidjet oldinko'rish",
                 editSaveBtn:"💾 Saqlash", success:"✅ Saqlandi!",
                 hintTgToken:"@BotFather dan oling", hintTgChat:"@userinfobot dan oling", phInfo:"Mehmonxona ma'lumotlari...", phNewPassword:"Yangi parol",
+                webhookBtn:"🔗 Webhook o'rnatish", whSetting:"⏳ O'rnatilmoqda...", whDone:"✅ Webhook o'rnatildi! URL: ", whActive:'✅ Faol', whConnErr:'❌ Ulanish xatosi',
+                editHintAutoLang:'Avto: AI mehmon tilini aniqlab, shu tilda javob beradi', editLblSmtpHost:'SMTP SERVER',
+                bilActivePlan:'FAOL TARIF', manageSubBtn:'⚙️ Obunani boshqarish', bilTrial:'Sinov (Trial)', bilCurrent:'Joriy tarif',
+                bilChoose:"O'tish →", bilNotConfigured:'Sozlanmagan', bilPerMonth:'/oy', bilCheckoutFail:"To'lovni ochib bo'lmadi",
+                bilStripeNotice:"💡 Stripe hali sozlanmagan. STRIPE_SECRET_KEY va narx IDlarini .env fayliga qo'shing.",
+                bilStActive:'✅ Faol obuna', bilStPastDue:"⚠️ To'lov kechikkan", bilStCanceled:'❌ Bekor qilingan',
+                featStarter:['2 000 xabar/oy','Telegram + Email','Mehmonlarni kuzatish',"So'rovlarni boshqarish"],
+                featPro:['10 000 xabar/oy','Barcha funksiyalar',"Ko'p xodim",'Analitika'],
+                featPremium:['Cheksiz xabar','Ustuvor yordam',"Maxsus AI o'rgatish",'SLA kafolati'],
             },
         };
         (function applyEditLang() {
