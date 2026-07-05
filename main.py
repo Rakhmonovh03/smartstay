@@ -57,7 +57,7 @@ from templates.owner_html import get_owner_login_html, get_owner_dashboard_html
 from templates.public_html import get_public_page_html
 from templates.widget_html import get_widget_html
 from templates.buffet_html import get_buffet_html
-from buffet import analyze_buffet_photo, save_buffet_scan, get_buffet_latest, get_buffet_history
+from buffet import analyze_buffet_photos, save_buffet_scan, get_buffet_latest, get_buffet_history, MAX_PHOTOS as BUFFET_MAX_PHOTOS
 
 load_dotenv()
 
@@ -2849,10 +2849,13 @@ def buffet_page(slug: str, request: Request):
 
 
 @app.post("/hotel/{slug}/buffet/analyze")
-async def buffet_analyze(slug: str, request: Request, photo: UploadFile = File(...)):
+async def buffet_analyze(slug: str, request: Request,
+                         photos: List[UploadFile] = File(None),
+                         photo: UploadFile = File(None)):
     """
-    Принимает фото буфета (multipart form-data, поле 'photo'),
-    анализирует через Claude Vision и сохраняет результат.
+    Принимает 1..MAX_PHOTOS фото буфета (multipart form-data, поле 'photos';
+    легаси-поле 'photo' тоже работает), анализирует все снимки одним запросом
+    через Claude Vision и сохраняет объединённый результат.
     Возвращает JSON: {ok, scan_id, result}.
     """
     hotel = get_hotel(slug)
@@ -2862,20 +2865,29 @@ async def buffet_analyze(slug: str, request: Request, photo: UploadFile = File(.
     if not ok:
         return JSONResponse({"error": "Unauthorized"}, status_code=401)
 
-    import base64
-    raw = await photo.read()
-    if len(raw) > 20 * 1024 * 1024:   # 20 MB limit
-        return JSONResponse({"error": "File too large (max 20 MB)"}, status_code=413)
+    files = [f for f in (photos or []) if f and f.filename]
+    if photo and photo.filename:
+        files.append(photo)
+    if not files:
+        return JSONResponse({"error": "No photo uploaded"}, status_code=400)
+    if len(files) > BUFFET_MAX_PHOTOS:
+        return JSONResponse({"error": f"Too many photos (max {BUFFET_MAX_PHOTOS})"}, status_code=400)
 
-    b64 = base64.b64encode(raw).decode()
-    media_type = photo.content_type or "image/jpeg"
+    import base64
+    images = []
+    for f in files:
+        raw = await f.read()
+        if len(raw) > 20 * 1024 * 1024:   # 20 MB per photo
+            return JSONResponse({"error": "File too large (max 20 MB)"}, status_code=413)
+        images.append((base64.b64encode(raw).decode(), f.content_type or "image/jpeg"))
 
     try:
-        result = await asyncio.to_thread(analyze_buffet_photo, b64, media_type)
+        result = await asyncio.to_thread(analyze_buffet_photos, images)
     except Exception as e:
         print(f"[buffet analysis error] {e}")
-        return JSONResponse({"error": "Bir hata oluştu, lütfen tekrar deneyin"}, status_code=500)
+        return JSONResponse({"error": "Analysis failed, please try again"}, status_code=500)
 
+    result["photo_count"] = len(images)
     scan_id = save_buffet_scan(slug, result)
     return {"ok": True, "scan_id": scan_id, "result": result}
 

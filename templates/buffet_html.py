@@ -262,10 +262,10 @@ def get_buffet_html(hotel_name: str, slug: str) -> str:
   <div class="card-title" id="lblUpload">📷 Загрузить фото буфета</div>
   <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
     <div class="upload-icon">📸</div>
-    <div class="upload-hint" id="uploadHint">Нажмите чтобы выбрать фото<br><small>JPG / PNG / WEBP — до 20 МБ</small></div>
-    <img id="previewImg" alt="preview">
+    <div class="upload-hint" id="uploadHint">Нажмите чтобы выбрать фото (до 6)<br><small>JPG / PNG / WEBP — до 20 МБ каждое</small></div>
+    <div id="previewGrid" style="display:none;flex-wrap:wrap;gap:8px;justify-content:center"></div>
   </div>
-  <input type="file" id="fileInput" accept="image/*" onchange="onFileSelect(this)">
+  <input type="file" id="fileInput" accept="image/*" multiple onchange="onFileSelect(this)">
   <button class="btn-gold" id="analyzeBtn" disabled onclick="analyzePhoto()">
     🤖 <span id="lblAnalyze">Анализировать с AI</span>
   </button>
@@ -297,14 +297,15 @@ def get_buffet_html(hotel_name: str, slug: str) -> str:
 
 <script>
   const slug = '{slug}';
-  let _selectedFile = null;
+  const MAX_PHOTOS = 6;
+  let _selectedFiles = [];
 
   // -------- i18n --------
   const BUFFET_I18N = {{
     en: {{
       pageSub: '{hotel_name} — AI buffet analysis',
       lblUpload: '📷 Upload buffet photo',
-      uploadHint: 'Click to select a photo<br><small>JPG / PNG / WEBP — up to 20 MB</small>',
+      uploadHint: 'Click to select photos (up to 6)<br><small>JPG / PNG / WEBP — up to 20 MB each</small>',
       lblAnalyze: 'Analyze with AI',
       lblSpinner: '⏳ AI is analyzing the buffet photo...',
       lblResults: '📊 Analysis results',
@@ -319,7 +320,7 @@ def get_buffet_html(hotel_name: str, slug: str) -> str:
     ru: {{
       pageSub: '{hotel_name} — AI анализ шведского стола',
       lblUpload: '📷 Загрузить фото буфета',
-      uploadHint: 'Нажмите чтобы выбрать фото<br><small>JPG / PNG / WEBP — до 20 МБ</small>',
+      uploadHint: 'Нажмите чтобы выбрать фото (до 6)<br><small>JPG / PNG / WEBP — до 20 МБ каждое</small>',
       lblAnalyze: 'Анализировать с AI',
       lblSpinner: '⏳ AI анализирует фото буфета...',
       lblResults: '📊 Результат анализа',
@@ -334,7 +335,7 @@ def get_buffet_html(hotel_name: str, slug: str) -> str:
     tr: {{
       pageSub: '{hotel_name} — AI büfe analizi',
       lblUpload: '📷 Büfe fotoğrafı yükle',
-      uploadHint: "Fotoğraf seçmek için tıklayın<br><small>JPG / PNG / WEBP — 20 MB'a kadar</small>",
+      uploadHint: "Fotoğraf seçmek için tıklayın (en fazla 6)<br><small>JPG / PNG / WEBP — her biri 20 MB'a kadar</small>",
       lblAnalyze: 'AI ile analiz et',
       lblSpinner: '⏳ AI büfe fotoğrafını analiz ediyor...',
       lblResults: '📊 Analiz sonuçları',
@@ -349,7 +350,7 @@ def get_buffet_html(hotel_name: str, slug: str) -> str:
     uz: {{
       pageSub: '{hotel_name} — AI bufet tahlili',
       lblUpload: '📷 Bufet rasmini yuklash',
-      uploadHint: 'Rasm tanlash uchun bosing<br><small>JPG / PNG / WEBP — 20 MB gacha</small>',
+      uploadHint: 'Rasm tanlash uchun bosing (6 tagacha)<br><small>JPG / PNG / WEBP — har biri 20 MB gacha</small>',
       lblAnalyze: 'AI bilan tahlil qilish',
       lblSpinner: '⏳ AI bufet rasmini tahlil qilmoqda...',
       lblResults: '📊 Tahlil natijalari',
@@ -380,36 +381,45 @@ def get_buffet_html(hotel_name: str, slug: str) -> str:
   // -------- Upload / Preview --------
 
   function onFileSelect(input) {{
-    const file = input.files[0];
-    if (!file) return;
-    _selectedFile = file;
+    const files = Array.from(input.files || [])
+      .filter(f => f.type.startsWith('image/'))
+      .slice(0, MAX_PHOTOS);
+    if (!files.length) return;
+    _selectedFiles = files;
 
-    const reader = new FileReader();
-    reader.onload = e => {{
-      const img = document.getElementById('previewImg');
-      img.src = e.target.result;
-      img.style.display = 'block';
-      const zone = document.getElementById('uploadZone');
-      zone.classList.add('has-image');
-      zone.querySelector('.upload-icon').style.display = 'none';
-      zone.querySelector('.upload-hint').style.display = 'none';
-    }};
-    reader.readAsDataURL(file);
+    const grid = document.getElementById('previewGrid');
+    grid.innerHTML = '';
+    grid.style.display = 'flex';
+    files.forEach(f => {{
+      const reader = new FileReader();
+      reader.onload = e => {{
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.alt = 'preview';
+        img.style.cssText = 'width:110px;height:82px;object-fit:cover;border-radius:10px;border:1px solid var(--border)';
+        grid.appendChild(img);
+      }};
+      reader.readAsDataURL(f);
+    }});
+
+    const zone = document.getElementById('uploadZone');
+    zone.classList.add('has-image');
+    zone.querySelector('.upload-icon').style.display = 'none';
+    zone.querySelector('.upload-hint').style.display = 'none';
     document.getElementById('analyzeBtn').disabled = false;
   }}
 
-  // Drag & drop support
+  // Drag & drop support (multiple files)
   const zone = document.getElementById('uploadZone');
   zone.addEventListener('dragover', e => {{ e.preventDefault(); zone.style.borderColor = 'var(--gold)'; }});
   zone.addEventListener('dragleave', () => {{ zone.style.borderColor = ''; }});
   zone.addEventListener('drop', e => {{
     e.preventDefault();
     zone.style.borderColor = '';
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {{
-      // Simulate file input selection
+    const files = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith('image/'));
+    if (files.length) {{
       const dt = new DataTransfer();
-      dt.items.add(file);
+      files.slice(0, MAX_PHOTOS).forEach(f => dt.items.add(f));
       const fi = document.getElementById('fileInput');
       fi.files = dt.files;
       onFileSelect(fi);
@@ -419,13 +429,13 @@ def get_buffet_html(hotel_name: str, slug: str) -> str:
   // -------- Analyze --------
 
   async function analyzePhoto() {{
-    if (!_selectedFile) return;
+    if (!_selectedFiles.length) return;
     document.getElementById('analyzeBtn').disabled = true;
     document.getElementById('spinner').classList.add('active');
     document.getElementById('resultsCard').style.display = 'none';
 
     const formData = new FormData();
-    formData.append('photo', _selectedFile);
+    _selectedFiles.forEach(f => formData.append('photos', f));
 
     try {{
       const res = await fetch('/hotel/' + slug + '/buffet/analyze', {{

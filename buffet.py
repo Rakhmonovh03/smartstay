@@ -26,9 +26,17 @@ _client = Anthropic()   # использует ANTHROPIC_API_KEY из окруж
 #  AI-анализ                                                                   #
 # --------------------------------------------------------------------------- #
 
-def analyze_buffet_photo(image_base64: str, media_type: str = "image/jpeg") -> dict:
+MAX_PHOTOS = 6   # максимум фото за один скан
+
+
+def analyze_buffet_photos(images: list) -> dict:
     """
-    Отправляет фото шведского стола в Claude Vision.
+    Отправляет одно или несколько фото шведского стола в Claude Vision
+    одним запросом.
+
+    images — список кортежей (image_base64, media_type), максимум MAX_PHOTOS.
+             Фото считаются разными ракурсами / секциями ОДНОГО буфета:
+             AI объединяет блюда со всех снимков в один список без дублей.
 
     Возвращает словарь вида:
     {
@@ -42,10 +50,15 @@ def analyze_buffet_photo(image_base64: str, media_type: str = "image/jpeg") -> d
     fill_percent — от 0 (пусто) до 100 (полное).
     status       — "empty" (0-20%), "low" (21-50%), "good" (51-80%), "full" (81-100%).
     """
+    images = images[:MAX_PHOTOS]
+    n = len(images)
+
     prompt = (
         "You are a hotel buffet monitoring system. "
-        "Analyze this photo of a hotel buffet table and return a JSON object "
-        "with EXACTLY this structure (no markdown, no extra text):\n\n"
+        + (f"Analyze these {n} photos, which show different angles/sections of the SAME hotel buffet. "
+           if n > 1 else
+           "Analyze this photo of a hotel buffet table. ")
+        + "Return a JSON object with EXACTLY this structure (no markdown, no extra text):\n\n"
         "{\n"
         '  "dishes": [\n'
         '    {"name": "Dish name", "fill_percent": 75, "status": "good"},\n'
@@ -54,30 +67,31 @@ def analyze_buffet_photo(image_base64: str, media_type: str = "image/jpeg") -> d
         '  "summary": "Brief overall buffet status"\n'
         "}\n\n"
         "Rules:\n"
-        "- List every visible dish / food container / tray.\n"
+        "- List every visible dish / food container / tray across ALL photos.\n"
+        "- If the same dish appears in several photos, list it ONCE (use the clearest view for the estimate).\n"
         "- fill_percent: integer 0–100 (0=completely empty, 100=completely full).\n"
         "- status must be one of: empty (0-20), low (21-50), good (51-80), full (81-100).\n"
         "- Use short descriptive English names for dishes.\n"
         "- Return ONLY the JSON object."
     )
 
+    content = [
+        {
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": mt or "image/jpeg",
+                "data": b64,
+            },
+        }
+        for b64, mt in images
+    ]
+    content.append({"type": "text", "text": prompt})
+
     response = _client.messages.create(
         model="claude-sonnet-4-5",
-        max_tokens=1024,
-        messages=[{
-            "role": "user",
-            "content": [
-                {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": media_type,
-                        "data": image_base64,
-                    },
-                },
-                {"type": "text", "text": prompt},
-            ],
-        }],
+        max_tokens=1536,
+        messages=[{"role": "user", "content": content}],
     )
 
     text = response.content[0].text.strip()
@@ -113,6 +127,11 @@ def analyze_buffet_photo(image_base64: str, media_type: str = "image/jpeg") -> d
             d["status"] = "full"
 
     return result
+
+
+def analyze_buffet_photo(image_base64: str, media_type: str = "image/jpeg") -> dict:
+    """Обратная совместимость: анализ одного фото."""
+    return analyze_buffet_photos([(image_base64, media_type)])
 
 
 # --------------------------------------------------------------------------- #
