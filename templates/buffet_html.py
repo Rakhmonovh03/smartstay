@@ -380,50 +380,90 @@ def get_buffet_html(hotel_name: str, slug: str) -> str:
 
   // -------- Upload / Preview --------
 
-  function onFileSelect(input) {{
-    const files = Array.from(input.files || [])
-      .filter(f => f.type.startsWith('image/'))
-      .slice(0, MAX_PHOTOS);
-    if (!files.length) return;
-    _selectedFiles = files;
+  function addFiles(list) {{
+    const picked = Array.from(list || []).filter(f => f.type.startsWith('image/'));
+    for (const f of picked) {{
+      if (_selectedFiles.length >= MAX_PHOTOS) break;
+      // не добавляем один и тот же файл дважды
+      if (!_selectedFiles.some(x => x.name === f.name && x.size === f.size)) {{
+        _selectedFiles.push(f);
+      }}
+    }}
+    renderPreviews();
+  }}
 
+  function onFileSelect(input) {{
+    addFiles(input.files);
+    input.value = '';   // чтобы можно было выбрать тот же файл снова после удаления
+  }}
+
+  function removePhoto(i, ev) {{
+    ev.stopPropagation();   // не открывать диалог выбора файла
+    _selectedFiles.splice(i, 1);
+    renderPreviews();
+  }}
+
+  function renderPreviews() {{
     const grid = document.getElementById('previewGrid');
+    const zone = document.getElementById('uploadZone');
     grid.innerHTML = '';
+
+    if (!_selectedFiles.length) {{
+      grid.style.display = 'none';
+      zone.classList.remove('has-image');
+      zone.querySelector('.upload-icon').style.display = '';
+      zone.querySelector('.upload-hint').style.display = '';
+      document.getElementById('analyzeBtn').disabled = true;
+      return;
+    }}
+
     grid.style.display = 'flex';
-    files.forEach(f => {{
+    _selectedFiles.forEach((f, i) => {{
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;display:inline-block';
+
+      const img = document.createElement('img');
+      img.alt = 'preview';
+      img.style.cssText = 'width:110px;height:82px;object-fit:cover;border-radius:10px;border:1px solid var(--border);display:block';
       const reader = new FileReader();
-      reader.onload = e => {{
-        const img = document.createElement('img');
-        img.src = e.target.result;
-        img.alt = 'preview';
-        img.style.cssText = 'width:110px;height:82px;object-fit:cover;border-radius:10px;border:1px solid var(--border)';
-        grid.appendChild(img);
-      }};
+      reader.onload = e => {{ img.src = e.target.result; }};
       reader.readAsDataURL(f);
+      wrap.appendChild(img);
+
+      const del = document.createElement('button');
+      del.textContent = '✕';
+      del.title = 'Remove';
+      del.style.cssText = 'position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;' +
+        'background:#E05555;color:#fff;border:none;cursor:pointer;font-size:12px;line-height:1;font-weight:700';
+      del.onclick = ev => removePhoto(i, ev);
+      wrap.appendChild(del);
+
+      grid.appendChild(wrap);
     }});
 
-    const zone = document.getElementById('uploadZone');
+    // плюс-плейсхолдер, если ещё есть место
+    if (_selectedFiles.length < MAX_PHOTOS) {{
+      const add = document.createElement('div');
+      add.textContent = '+';
+      add.style.cssText = 'width:110px;height:82px;border:2px dashed var(--border);border-radius:10px;' +
+        'display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--text3);cursor:pointer';
+      grid.appendChild(add);
+    }}
+
     zone.classList.add('has-image');
     zone.querySelector('.upload-icon').style.display = 'none';
     zone.querySelector('.upload-hint').style.display = 'none';
     document.getElementById('analyzeBtn').disabled = false;
   }}
 
-  // Drag & drop support (multiple files)
+  // Drag & drop support (multiple files, добавляются к выбранным)
   const zone = document.getElementById('uploadZone');
   zone.addEventListener('dragover', e => {{ e.preventDefault(); zone.style.borderColor = 'var(--gold)'; }});
   zone.addEventListener('dragleave', () => {{ zone.style.borderColor = ''; }});
   zone.addEventListener('drop', e => {{
     e.preventDefault();
     zone.style.borderColor = '';
-    const files = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith('image/'));
-    if (files.length) {{
-      const dt = new DataTransfer();
-      files.slice(0, MAX_PHOTOS).forEach(f => dt.items.add(f));
-      const fi = document.getElementById('fileInput');
-      fi.files = dt.files;
-      onFileSelect(fi);
-    }}
+    addFiles(e.dataTransfer.files);
   }});
 
   // -------- Analyze --------
@@ -436,6 +476,7 @@ def get_buffet_html(hotel_name: str, slug: str) -> str:
 
     const formData = new FormData();
     _selectedFiles.forEach(f => formData.append('photos', f));
+    formData.append('lang', localStorage.getItem('ss_lang') || 'en');
 
     try {{
       const res = await fetch('/hotel/' + slug + '/buffet/analyze', {{

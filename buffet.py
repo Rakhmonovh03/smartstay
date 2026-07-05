@@ -28,8 +28,10 @@ _client = Anthropic()   # использует ANTHROPIC_API_KEY из окруж
 
 MAX_PHOTOS = 6   # максимум фото за один скан
 
+_LANG_NAMES = {"en": "English", "ru": "Russian", "tr": "Turkish", "uz": "Uzbek"}
 
-def analyze_buffet_photos(images: list) -> dict:
+
+def analyze_buffet_photos(images: list, lang: str = "en") -> dict:
     """
     Отправляет одно или несколько фото шведского стола в Claude Vision
     одним запросом.
@@ -52,6 +54,7 @@ def analyze_buffet_photos(images: list) -> dict:
     """
     images = images[:MAX_PHOTOS]
     n = len(images)
+    lang_name = _LANG_NAMES.get(lang, "English")
 
     prompt = (
         "You are a hotel buffet monitoring system. "
@@ -71,7 +74,7 @@ def analyze_buffet_photos(images: list) -> dict:
         "- If the same dish appears in several photos, list it ONCE (use the clearest view for the estimate).\n"
         "- fill_percent: integer 0–100 (0=completely empty, 100=completely full).\n"
         "- status must be one of: empty (0-20), low (21-50), good (51-80), full (81-100).\n"
-        "- Use short descriptive English names for dishes.\n"
+        f"- Write dish names and the summary in {lang_name}. Keep names short and descriptive.\n"
         "- Return ONLY the JSON object."
     )
 
@@ -129,9 +132,9 @@ def analyze_buffet_photos(images: list) -> dict:
     return result
 
 
-def analyze_buffet_photo(image_base64: str, media_type: str = "image/jpeg") -> dict:
+def analyze_buffet_photo(image_base64: str, media_type: str = "image/jpeg", lang: str = "en") -> dict:
     """Обратная совместимость: анализ одного фото."""
-    return analyze_buffet_photos([(image_base64, media_type)])
+    return analyze_buffet_photos([(image_base64, media_type)], lang)
 
 
 # --------------------------------------------------------------------------- #

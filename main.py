@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, UploadFile, File
+from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse, Response, JSONResponse, FileResponse
 from anthropic import Anthropic
 from dotenv import load_dotenv
@@ -2851,7 +2851,8 @@ def buffet_page(slug: str, request: Request):
 @app.post("/hotel/{slug}/buffet/analyze")
 async def buffet_analyze(slug: str, request: Request,
                          photos: List[UploadFile] = File(None),
-                         photo: UploadFile = File(None)):
+                         photo: UploadFile = File(None),
+                         lang: str = Form("en")):
     """
     Принимает 1..MAX_PHOTOS фото буфета (multipart form-data, поле 'photos';
     легаси-поле 'photo' тоже работает), анализирует все снимки одним запросом
@@ -2881,8 +2882,10 @@ async def buffet_analyze(slug: str, request: Request,
             return JSONResponse({"error": "File too large (max 20 MB)"}, status_code=413)
         images.append((base64.b64encode(raw).decode(), f.content_type or "image/jpeg"))
 
+    if lang not in ("en", "ru", "tr", "uz"):
+        lang = "en"
     try:
-        result = await asyncio.to_thread(analyze_buffet_photos, images)
+        result = await asyncio.to_thread(analyze_buffet_photos, images, lang)
     except Exception as e:
         print(f"[buffet analysis error] {e}")
         return JSONResponse({"error": "Analysis failed, please try again"}, status_code=500)
