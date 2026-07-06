@@ -1,7 +1,7 @@
 import sqlite3
 import re
 import bcrypt
-from datetime import datetime
+from datetime import datetime, timedelta
 from config import DATABASE_PATH, URGENT_KEYWORDS
 from crypto_util import encrypt, decrypt
 
@@ -892,19 +892,48 @@ def get_room_by_telegram_msg_id(hotel_slug: str, telegram_msg_id: int) -> str | 
 # Keywords that signal a service request, grouped by category.
 _REQUEST_KEYWORDS = {
     "room_service": [
+        # tr
         "yemek", "içecek", "su", "çay", "kahve", "meyve", "atıştırma", "menü",
+        "kahvaltı", "öğle yemeği", "akşam yemeği", "açım",
+        # en
         "food", "water", "tea", "coffee", "drink", "snack", "menu", "room service",
+        "breakfast", "lunch", "dinner", "hungry",
+        # ru
         "еда", "вода", "чай", "кофе", "еду", "напиток", "обед", "ужин", "завтрак",
+        "меню", "поесть", "голоден", "голодны",
+        # uz
+        "ovqat", "suv", "choy", "qahva", "ichimlik", "nonushta", "tushlik",
+        "kechki ovqat", "menyu",
     ],
     "maintenance": [
+        # tr
         "arızalı", "bozuk", "çalışmıyor", "tamir", "kırık", "akar", "musluk",
+        "klima", "ısıtma", "televizyon", "kumanda", "priz", "lamba", "duş",
+        # en
         "broken", "not working", "fix", "repair", "leak", "faucet", "toilet",
+        "wifi", "wi-fi", "internet", "air conditioning", "air conditioner",
+        "heating", "heater", "tv", "television", "remote", "socket", "lamp",
+        "shower", "hot water",
+        # ru
         "сломан", "не работает", "поломка", "починить", "течёт", "кран",
+        "вай-фай", "интернет", "кондиционер", "отопление", "телевизор",
+        "пульт", "розетка", "лампочка", "душ", "горячей воды", "горячая вода",
+        # uz
+        "ishlamayapti", "buzilgan", "tuzatish", "konditsioner", "isitish",
+        "chiroq", "dush", "televizor", "pult", "rozetka", "issiq suv",
     ],
     "housekeeping": [
+        # tr
         "temizlik", "temizle", "havlu", "çarşaf", "yatak", "süpürge",
-        "clean", "cleaning", "towel", "sheets", "linen", "housekeeping",
-        "уборка", "убрать", "полотенце", "простыня", "постель",
+        "yastık", "battaniye", "çöp",
+        # en
+        "clean", "cleaning", "towel", "towels", "sheets", "linen", "housekeeping",
+        "pillow", "blanket", "trash", "garbage",
+        # ru
+        "уборка", "убрать", "полотенце", "полотенца", "простыня", "постель",
+        "подушка", "подушку", "одеяло", "мусор", "убраться",
+        # uz
+        "tozalash", "sochiq", "choyshab", "yostiq", "ko'rpa", "axlat",
     ],
 }
 
@@ -923,6 +952,26 @@ def detect_request_category(message: str) -> str | None:
             if re.search(r"\b" + re.escape(kw) + r"\b", msg):
                 return category
     return None
+
+
+def has_recent_pending_request(hotel_slug: str, room: str, category: str,
+                               minutes: int = 30) -> bool:
+    """
+    True, если по этому номеру уже есть НЕзакрытая заявка той же категории,
+    созданная за последние `minutes` минут — защита от дублей, когда гость
+    пишет об одной проблеме несколько сообщений подряд.
+    """
+    since = (datetime.now() - timedelta(minutes=minutes)).strftime("%Y-%m-%d %H:%M")
+    conn = sqlite3.connect(DATABASE_PATH)
+    row = conn.execute(
+        """SELECT 1 FROM requests
+           WHERE hotel_slug=? AND room=? AND category=?
+             AND status='pending' AND created_at >= ?
+           LIMIT 1""",
+        (hotel_slug, room, category, since),
+    ).fetchone()
+    conn.close()
+    return row is not None
 
 
 def save_request(hotel_slug: str, room: str, guest_name: str,

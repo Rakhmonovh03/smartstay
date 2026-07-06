@@ -29,6 +29,10 @@ NOTIF_I18N = {
                    "💬 Message: {message}\n"
                    "⏰ Time: {time}\n\n"
                    "<i>↩️ Reply to this message to write to the guest.</i>"),
+        "auto_request": ("📋 <b>New service request</b> — {hotel}\n"
+                         "🚪 Room {room} · {category}\n"
+                         "💬 {message}\n\n"
+                         "<i>Added to the Requests board automatically.</i>"),
         "low_rating": ("⚠️ <b>Low rating received!</b>\n"
                        "🏨 Hotel: {hotel}\n"
                        "🚪 Room: {room}\n"
@@ -82,6 +86,10 @@ NOTIF_I18N = {
                    "💬 Сообщение: {message}\n"
                    "⏰ Время: {time}\n\n"
                    "<i>↩️ Ответьте на это сообщение, чтобы написать гостю.</i>"),
+        "auto_request": ("📋 <b>Новая заявка</b> — {hotel}\n"
+                         "🚪 Номер {room} · {category}\n"
+                         "💬 {message}\n\n"
+                         "<i>Автоматически добавлена в раздел «Запросы».</i>"),
         "low_rating": ("⚠️ <b>Низкая оценка!</b>\n"
                        "🏨 Отель: {hotel}\n"
                        "🚪 Номер: {room}\n"
@@ -135,6 +143,10 @@ NOTIF_I18N = {
                    "💬 Mesaj: {message}\n"
                    "⏰ Saat: {time}\n\n"
                    "<i>↩️ Misafire yazmak için bu mesaja cevap verin.</i>"),
+        "auto_request": ("📋 <b>Yeni talep</b> — {hotel}\n"
+                         "🚪 Oda {room} · {category}\n"
+                         "💬 {message}\n\n"
+                         "<i>Talepler panosuna otomatik eklendi.</i>"),
         "low_rating": ("⚠️ <b>Düşük Puan Alındı!</b>\n"
                        "🏨 Otel: {hotel}\n"
                        "🚪 Oda: {room}\n"
@@ -188,6 +200,10 @@ NOTIF_I18N = {
                    "💬 Xabar: {message}\n"
                    "⏰ Vaqt: {time}\n\n"
                    "<i>↩️ Mehmonga yozish uchun shu xabarga javob bering.</i>"),
+        "auto_request": ("📋 <b>Yangi so'rov</b> — {hotel}\n"
+                         "🚪 Xona {room} · {category}\n"
+                         "💬 {message}\n\n"
+                         "<i>So'rovlar bo'limiga avtomatik qo'shildi.</i>"),
         "low_rating": ("⚠️ <b>Past baho olindi!</b>\n"
                        "🏨 Mehmonxona: {hotel}\n"
                        "🚪 Xona: {room}\n"
@@ -226,6 +242,24 @@ NOTIF_I18N = {
         "email_footer": "SmartStay AI tomonidan yuborildi",
     },
 }
+
+
+# Localized labels for request categories (used in auto_request notifications).
+_REQ_CAT_NAMES = {
+    "en": {"room_service": "🍽 Room service", "maintenance": "🔧 Maintenance",
+           "housekeeping": "🧹 Housekeeping", "general": "📌 General"},
+    "ru": {"room_service": "🍽 Рум-сервис", "maintenance": "🔧 Ремонт",
+           "housekeeping": "🧹 Уборка", "general": "📌 Общее"},
+    "tr": {"room_service": "🍽 Oda Servisi", "maintenance": "🔧 Bakım",
+           "housekeeping": "🧹 Temizlik", "general": "📌 Genel"},
+    "uz": {"room_service": "🍽 Xona xizmati", "maintenance": "🔧 Ta'mirlash",
+           "housekeeping": "🧹 Tozalash", "general": "📌 Umumiy"},
+}
+
+
+def req_cat_name(lang: str, code: str) -> str:
+    """Localized human-readable name for a request category code."""
+    return _REQ_CAT_NAMES.get(lang, _REQ_CAT_NAMES["en"]).get(code, code)
 
 
 def notif_lang(hotel: dict) -> str:

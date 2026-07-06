@@ -30,7 +30,7 @@ from database import (
     get_recent_ratings,
     save_telegram_msg_id, get_room_by_telegram_msg_id,
     get_daily_digest_data,
-    detect_request_category, save_request, get_requests,
+    detect_request_category, save_request, get_requests, has_recent_pending_request,
     update_request_status, delete_request, get_pending_requests_count,
     auto_checkout_overdue,
     get_room_notes, save_room_note, delete_room_note,
@@ -46,7 +46,7 @@ from database import (
     generate_room_numbers,
 )
 from telegram import send_telegram, set_webhook
-from notifications import nt, notif_lang
+from notifications import nt, notif_lang, req_cat_name
 from templates.chat_html import get_chat_html
 from templates.checkin_html import get_checkin_html
 from templates.dashboard_html import get_dashboard_html
@@ -596,13 +596,29 @@ async def hotel_chat_api(request: Request, slug: str, data: ChatRequest):
 
     priority = save_hotel_message(slug, room, "user", message)
 
-    # Auto-detect service requests and save to tracker
+    nlang = notif_lang(hotel)  # notifications in the hotel's language
+
+    # Auto-detect service requests and save to tracker.
+    # Dedup: skip if the same room already has a pending request of this
+    # category from the last 30 min (guest often sends several messages).
     req_category = detect_request_category(message)
-    if req_category:
+    req_created = False
+    if req_category and not has_recent_pending_request(slug, room, req_category):
         guest_name = f"{guest['first_name']} {guest['last_name']}" if guest else ""
         save_request(slug, room, guest_name, req_category, message)
+        req_created = True
 
-    nlang = notif_lang(hotel)  # notifications in the hotel's language
+    # Notify staff in Telegram about the new auto-request (skip for urgent
+    # messages — those already trigger their own, louder notification below).
+    if req_created and priority != "urgent" and hotel.get("telegram_token") and hotel.get("telegram_chat_id"):
+        async def _send_request_notif():
+            await send_telegram(
+                nt(nlang, "auto_request", hotel=hotel["name"], room=room,
+                   category=req_cat_name(nlang, req_category), message=message),
+                token=hotel.get("telegram_token"),
+                chat_id=hotel.get("telegram_chat_id"),
+            )
+        asyncio.create_task(_send_request_notif())
     from datetime import datetime as _dt_n
     if priority == "urgent":
         async def _send_urgent_and_map():
