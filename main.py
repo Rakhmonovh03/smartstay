@@ -79,6 +79,62 @@ app = FastAPI()
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# ===== CUSTOM 404 PAGE =====
+NOT_FOUND_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>404 — SmartStay</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:linear-gradient(135deg,#0a0a0a 0%,#1a1410 100%);
+               color:#fff; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+        .box { text-align:center; max-width:440px; }
+        .icon { font-size:56px; margin-bottom:16px; }
+        .code { font-size:72px; font-weight:800; background:linear-gradient(135deg,#C9A84C,#E8C96A);
+                -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; line-height:1; }
+        h1 { font-size:20px; font-weight:600; margin:14px 0 8px; }
+        p { color:#888; font-size:14px; margin-bottom:28px; line-height:1.6; }
+        a.btn { display:inline-block; background:linear-gradient(135deg,#C9A84C,#E8C96A); color:#1a1a1a;
+                text-decoration:none; border-radius:12px; padding:13px 28px; font-size:14px; font-weight:700; transition:transform .15s; }
+        a.btn:hover { transform:translateY(-2px); }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="icon">🏨</div>
+        <div class="code">404</div>
+        <h1 id="t">Page not found</h1>
+        <p id="s">This page does not exist or has been moved.</p>
+        <a class="btn" href="/" id="b">← Home</a>
+    </div>
+    <script>
+        const L = {
+            en: { t:'Page not found', s:'This page does not exist or has been moved.', b:'← Home' },
+            ru: { t:'Страница не найдена', s:'Такой страницы нет или она переехала.', b:'← На главную' },
+            tr: { t:'Sayfa bulunamadı', s:'Bu sayfa mevcut değil veya taşındı.', b:'← Ana sayfa' },
+            uz: { t:'Sahifa topilmadi', s:"Bunday sahifa yo'q yoki ko'chirilgan.", b:'← Bosh sahifa' }
+        };
+        let lang = localStorage.getItem('ss_lang') || (navigator.language || 'en').slice(0,2);
+        const d = L[lang] || L.en;
+        document.getElementById('t').textContent = d.t;
+        document.getElementById('s').textContent = d.s;
+        document.getElementById('b').textContent = d.b;
+    </script>
+</body>
+</html>"""
+
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    # Branded 404 page for browser routes; keep JSON for API endpoints.
+    if exc.status_code == 404 and not request.url.path.startswith("/api"):
+        return HTMLResponse(NOT_FOUND_HTML, status_code=404)
+    return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+
 client = Anthropic()
 
 
