@@ -768,6 +768,25 @@ async def hotel_chat_api(request: Request, slug: str, data: ChatRequest):
 
     guest_block = ("\n\nMisafir bilgileri:\n" + "\n".join(guest_lines)) if guest_lines else ""
 
+    # Services catalog — so the AI offers what the hotel actually sells
+    try:
+        _services = get_services(slug, active_only=True)
+    except Exception:
+        _services = []
+    services_block = ""
+    if _services:
+        svc_lines = []
+        for s in _services[:40]:
+            price = f"{s['price']:g} {s['currency']}" if s.get("price") else "free"
+            desc = f" — {s['description']}" if s.get("description") else ""
+            svc_lines.append(f"- {s.get('icon') or ''} {s['name']}: {price}{desc}".strip())
+        services_block = (
+            "\n\nHOTEL SERVICES MENU (this is the hotel's actual service catalog with prices. "
+            "When the guest asks about services, food, spa, etc., offer items from THIS list "
+            "with their exact prices. Do NOT invent services that are not listed here or in the "
+            "hotel information above):\n" + "\n".join(svc_lines)
+        )
+
     ai_name = hotel.get("ai_name") or "AI Asistan"
     default_lang = hotel.get("default_language") or "auto"
     supported_langs = hotel.get("supported_languages") or "en,ru,tr,ar,de,fr"
@@ -802,6 +821,7 @@ async def hotel_chat_api(request: Request, slug: str, data: ChatRequest):
     system = (
         f"You are '{ai_name}', the AI concierge assistant for {hotel['name']} hotel.\n\n" +
         hotel["info"] +
+        services_block +
         f"\n\nHotel: {hotel['name']}\nRoom: {room}. Do not ask for the room number again." +
         guest_block +
         f"\n\nIntroduce yourself as '{ai_name}'. Be warm, personalised and professional. "
