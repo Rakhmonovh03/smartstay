@@ -2000,6 +2000,7 @@ async def cron_daily_digest(secret: str = "", request: Request = None):
                 nt(nlang, "digest_checkin", n=d['checkins_today']),
                 nt(nlang, "digest_checkout", n=len(d['checkouts_today'])),
                 nt(nlang, "digest_unread", n=d['unread_messages']),
+                nt(nlang, "digest_requests", n=get_pending_requests_count(h["slug"])),
                 nt(nlang, "digest_rating", r=rating_str),
             ]
             await send_telegram(
@@ -2026,6 +2027,7 @@ async def cron_daily_digest(secret: str = "", request: Request = None):
                 nt(nlang, "digest_checkin",  n=d['checkins_today']),
                 nt(nlang, "digest_checkout", n=len(d['checkouts_today'])),
                 nt(nlang, "digest_unread",   n=d['unread_messages']),
+                nt(nlang, "digest_requests", n=get_pending_requests_count(h["slug"])),
                 nt(nlang, "digest_rating",   r=rating_str),
             ]
             stats_html = "".join(
