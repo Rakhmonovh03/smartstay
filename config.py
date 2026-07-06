@@ -27,12 +27,13 @@ INVITE_CODE = os.getenv("INVITE_CODE", "")
 SECURE_COOKIES = os.getenv("SECURE_COOKIES", "false").lower() == "true"
 
 # Message limits per plan per calendar month (user messages only).
-# -1 = unlimited.
+# -1 = unlimited. Message limits are RETIRED: pricing is now per room count
+# (Mini / Standard / Resort), so all plans are unlimited.
 PLAN_LIMITS = {
-    "trial":   500,
-    "starter": 2000,
-    "pro":     10000,
-    "premium": -1,
+    "trial":   -1,
+    "starter": -1,   # Mini
+    "pro":     -1,   # Standard
+    "premium": -1,   # Resort
 }
 
 # Secret for the /api/cron/* endpoints — set to a random string in production.

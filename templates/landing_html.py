@@ -109,6 +109,21 @@ LANDING_HTML = """<!DOCTYPE html>
         /* PRICING */
         .pricing { background:var(--bg2); }
         .pricing-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px; margin-top:56px; max-width:960px; }
+
+        /* Early adopters box */
+        .early-box { max-width:960px; margin:48px auto 0; background:linear-gradient(135deg,rgba(201,168,76,.14),rgba(201,168,76,.04)); border:1px solid rgba(201,168,76,.4); border-radius:20px; padding:36px 32px; text-align:center; }
+        .early-badge { display:inline-block; padding:6px 16px; border-radius:20px; background:rgba(201,168,76,.15); color:var(--gold); font-size:12px; font-weight:800; letter-spacing:2px; margin-bottom:14px; }
+        .early-title { font-size:26px; font-weight:800; margin-bottom:10px; }
+        .early-sub { color:var(--text2); font-size:15px; margin-bottom:24px; }
+
+        /* FAQ */
+        .faq-list { max-width:760px; margin:48px auto 0; display:flex; flex-direction:column; gap:12px; }
+        .faq-item { background:var(--bg3); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+        .faq-item summary { cursor:pointer; list-style:none; padding:18px 22px; font-size:16px; font-weight:600; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+        .faq-item summary::-webkit-details-marker { display:none; }
+        .faq-item summary::after { content:'+'; color:var(--gold); font-size:22px; font-weight:700; flex-shrink:0; }
+        .faq-item[open] summary::after { content:'–'; }
+        .faq-item p { padding:0 22px 18px; color:var(--text2); font-size:14px; line-height:1.7; }
         .price-card { background:var(--bg); border:1px solid var(--border); border-radius:24px; padding:32px; position:relative; transition:.2s; }
         .price-card:hover { border-color:rgba(201,168,76,.25); }
         .price-card.popular { border-color:var(--gold); background:linear-gradient(180deg,rgba(201,168,76,.06) 0%,var(--bg) 100%); }
@@ -180,7 +195,7 @@ LANDING_HTML = """<!DOCTYPE html>
         <span id="heroTitle1">Smart Hotel</span><br>
         <span id="heroTitle2">on Autopilot</span>
     </h1>
-    <p id="heroSub">24/7 AI assistant for your guests, staff management, analytics and more — all in one dashboard.</p>
+    <p id="heroSub">Reply to guests in seconds, not hours — the AI handles 80% of questions for you.</p>
     <div class="hero-cta">
         <a class="btn-hero btn-hero-primary" href="/register">
             🚀 <span id="heroCta1">Get Started Free</span>
@@ -257,55 +272,87 @@ LANDING_HTML = """<!DOCTYPE html>
         <div class="section-title" id="priceTitle">Simple, transparent pricing</div>
         <div class="section-sub" id="priceSub">All plans include a 30-day free trial. No credit card required.</div>
 
+        <!-- Early adopters program -->
+        <div class="early-box">
+            <div class="early-badge" id="earlyBadge">🚀 EARLY ADOPTER PROGRAM</div>
+            <div class="early-title" id="earlyTitle">First 5 hotels get 6 months free</div>
+            <div class="early-sub" id="earlySub">In exchange for honest feedback and a review. No hidden conditions.</div>
+            <a class="btn-hero btn-hero-primary" href="/register" id="earlyCta">Become a first client</a>
+        </div>
+
         <div class="pricing-grid">
-            <!-- Başlangıç -->
+            <!-- Mini -->
             <div class="price-card">
                 <div class="trial-badge" id="trialBadge1">30 Days Free</div>
-                <div class="price-name" id="plan1Name">Starter</div>
-                <div class="price-amount"><sup>$</sup>299</div>
+                <div class="price-name" id="plan1Name">Mini</div>
+                <div class="price-amount"><sup>$</sup>49</div>
                 <div class="price-period" id="planMo1">per month</div>
                 <ul class="price-features">
-                    <li id="p1f1">500 messages / month</li>
-                    <li id="p1f2">1 property</li>
-                    <li id="p1f3">AI guest chat</li>
-                    <li id="p1f4">Telegram & Email alerts</li>
-                    <li id="p1f5">Request management</li>
+                    <li id="p1f1">Up to 15 rooms</li>
+                    <li id="p1f2">AI guest chat 24/7</li>
+                    <li id="p1f3">Request tracker</li>
+                    <li id="p1f4">Telegram notifications</li>
                 </ul>
                 <a class="btn-plan btn-plan-outline" href="/register" id="p1Cta">Start Free Trial</a>
             </div>
 
-            <!-- Pro (popular) -->
+            <!-- Standard (popular) -->
             <div class="price-card popular">
                 <div class="popular-badge" id="popularBadge">MOST POPULAR</div>
                 <div class="trial-badge" id="trialBadge2">30 Days Free</div>
-                <div class="price-name" id="plan2Name">Pro</div>
-                <div class="price-amount"><sup>$</sup>599</div>
+                <div class="price-name" id="plan2Name">Standard</div>
+                <div class="price-amount"><sup>$</sup>129</div>
                 <div class="price-period" id="planMo2">per month</div>
                 <ul class="price-features">
-                    <li id="p2f1">2,000 messages / month</li>
-                    <li id="p2f2">All Starter features</li>
-                    <li id="p2f3">Multi-staff roles</li>
-                    <li id="p2f4">Analytics & charts</li>
-                    <li id="p2f5">Staff internal chat</li>
+                    <li id="p2f1">Up to 40 rooms</li>
+                    <li id="p2f2">Everything in Mini</li>
+                    <li id="p2f3">Staff roles</li>
+                    <li id="p2f4">Staff chat</li>
+                    <li id="p2f5">Analytics</li>
                 </ul>
                 <a class="btn-plan btn-plan-gold" href="/register" id="p2Cta">Start Free Trial</a>
             </div>
 
-            <!-- Kurumsal -->
+            <!-- Resort -->
             <div class="price-card">
                 <div class="trial-badge" id="trialBadge3">30 Days Free</div>
-                <div class="price-name" id="plan3Name">Premium</div>
-                <div class="price-amount"><sup>$</sup>999</div>
+                <div class="price-name" id="plan3Name">Resort</div>
+                <div class="price-amount"><sup>$</sup>299</div>
                 <div class="price-period" id="planMo3">per month</div>
                 <ul class="price-features">
-                    <li id="p3f1">Unlimited messages</li>
+                    <li id="p3f1">Unlimited rooms</li>
                     <li id="p3f2">Multiple properties</li>
-                    <li id="p3f3">Priority support</li>
-                    <li id="p3f4">Custom AI training</li>
-                    <li id="p3f5">SLA guarantee</li>
+                    <li id="p3f3">Custom AI setup</li>
+                    <li id="p3f4">Priority support</li>
                 </ul>
                 <a class="btn-plan btn-plan-outline" href="/register" id="p3Cta">Start Free Trial</a>
             </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+    <div class="container">
+        <div class="section-label" id="faqLabel">FAQ</div>
+        <div class="section-title" id="faqTitle">Common questions</div>
+        <div class="faq-list">
+            <details class="faq-item">
+                <summary id="faq1Q">How do I get started?</summary>
+                <p id="faq1A">Sign up, paste your hotel info (breakfast hours, Wi-Fi password, services), print the room QR codes — done. Most hotels are live in one evening. If you get stuck, we set it up for you for free.</p>
+            </details>
+            <details class="faq-item">
+                <summary id="faq2Q">Do I need a programmer?</summary>
+                <p id="faq2A">No. Everything is set up in the browser, like a social network. The only "code" is one line for the website widget — copy and paste. No website? Guests simply scan the QR code in their room.</p>
+            </details>
+            <details class="faq-item">
+                <summary id="faq3Q">What if the AI makes a mistake?</summary>
+                <p id="faq3A">The AI only answers from the information you gave it. Anything complex or urgent goes straight to your staff — you get a Telegram notification instantly. Every conversation is visible in your dashboard.</p>
+            </details>
+            <details class="faq-item">
+                <summary id="faq4Q">Can I cancel anytime?</summary>
+                <p id="faq4A">Yes — anytime, no penalties, no questions asked. The first 30 days are free with no card, so if it is not for you, you simply stop using it.</p>
+            </details>
         </div>
     </div>
 </section>
@@ -346,7 +393,7 @@ const I18N = {
         navLogin:'Login', navRegister:'Register',
         heroBadge:'AI-Powered Hotel Management',
         heroTitle1:'Smart Hotel', heroTitle2:'on Autopilot',
-        heroSub:'24/7 AI assistant for your guests, staff management, analytics and more — all in one dashboard.',
+        heroSub:'Reply to guests in seconds, not hours — the AI handles 80% of questions for you.',
         heroCta1:'Get Started Free', heroCta2:'Sign In', heroCtaVideo:'Watch video',
         statAi:'AI Assistant', statLang:'Languages', statFree:'Days Free Trial',
         featLabel:'Features', featTitle:'Everything your hotel needs',
@@ -360,10 +407,17 @@ const I18N = {
         priceLabel:'Pricing', priceTitle:'Simple, transparent pricing',
         priceSub:'All plans include a 30-day free trial. No credit card required.',
         trialBadge:'30 Days Free', popularBadge:'MOST POPULAR', planMo:'per month',
-        plan1Name:'Starter', p1f1:'500 messages / month', p1f2:'1 property', p1f3:'AI guest chat', p1f4:'Telegram & Email alerts', p1f5:'Request management',
-        plan2Name:'Pro', p2f1:'2,000 messages / month', p2f2:'All Starter features', p2f3:'Multi-staff roles', p2f4:'Analytics & charts', p2f5:'Staff internal chat',
-        plan3Name:'Premium', p3f1:'Unlimited messages', p3f2:'Multiple properties', p3f3:'Priority support', p3f4:'Custom AI training', p3f5:'SLA guarantee',
+        plan1Name:'Mini', p1f1:'Up to 15 rooms', p1f2:'AI guest chat 24/7', p1f3:'Request tracker', p1f4:'Telegram notifications',
+        plan2Name:'Standard', p2f1:'Up to 40 rooms', p2f2:'Everything in Mini', p2f3:'Staff roles', p2f4:'Staff chat', p2f5:'Analytics',
+        plan3Name:'Resort', p3f1:'Unlimited rooms', p3f2:'Multiple properties', p3f3:'Custom AI setup', p3f4:'Priority support',
         planCta:'Start Free Trial',
+        earlyBadge:'🚀 EARLY ADOPTER PROGRAM', earlyTitle:'First 5 hotels get 6 months free',
+        earlySub:'In exchange for honest feedback and a review. No hidden conditions.', earlyCta:'Become a first client',
+        faqLabel:'FAQ', faqTitle:'Common questions',
+        faq1Q:'How do I get started?', faq1A:'Sign up, paste your hotel info (breakfast hours, Wi-Fi password, services), print the room QR codes — done. Most hotels are live in one evening. If you get stuck, we set it up for you for free.',
+        faq2Q:'Do I need a programmer?', faq2A:'No. Everything is set up in the browser, like a social network. The only "code" is one line for the website widget — copy and paste. No website? Guests simply scan the QR code in their room.',
+        faq3Q:'What if the AI makes a mistake?', faq3A:'The AI only answers from the information you gave it. Anything complex or urgent goes straight to your staff — you get a Telegram notification instantly. Every conversation is visible in your dashboard.',
+        faq4Q:'Can I cancel anytime?', faq4A:'Yes — anytime, no penalties, no questions asked. The first 30 days are free with no card, so if it is not for you, you simply stop using it.',
         footerTagline:'AI-powered hotel management platform for modern hospitality.',
         footerProduct:'Product', footerFeatures:'Features', footerPricing:'Pricing', footerRegister:'Register', footerLogin:'Login', footerContact:'Contact',
         footerRights:'All rights reserved.',
@@ -373,7 +427,7 @@ const I18N = {
         navLogin:'Войти', navRegister:'Регистрация',
         heroBadge:'AI-управление отелем',
         heroTitle1:'Умный отель', heroTitle2:'на автопилоте',
-        heroSub:'AI-ассистент для гостей 24/7, управление персоналом, аналитика и многое другое — в одном дашборде.',
+        heroSub:'Отвечайте гостям за секунды, а не часы — AI берёт на себя 80% вопросов.',
         heroCta1:'Начать бесплатно', heroCta2:'Войти', heroCtaVideo:'Смотреть видео',
         statAi:'AI-ассистент', statLang:'Языка', statFree:'Дней бесплатно',
         featLabel:'Возможности', featTitle:'Всё для вашего отеля',
@@ -387,10 +441,17 @@ const I18N = {
         priceLabel:'Тарифы', priceTitle:'Простые и прозрачные цены',
         priceSub:'Все тарифы включают 30-дневный бесплатный пробный период. Без банковской карты.',
         trialBadge:'30 дней бесплатно', popularBadge:'ПОПУЛЯРНЫЙ', planMo:'в месяц',
-        plan1Name:'Стартовый', p1f1:'500 сообщений / месяц', p1f2:'1 объект', p1f3:'AI-чат для гостей', p1f4:'Telegram и Email уведомления', p1f5:'Управление запросами',
-        plan2Name:'Про', p2f1:'2 000 сообщений / месяц', p2f2:'Всё из Стартового', p2f3:'Роли для персонала', p2f4:'Аналитика и графики', p2f5:'Чат персонала',
-        plan3Name:'Премиум', p3f1:'Безлимитные сообщения', p3f2:'Несколько объектов', p3f3:'Приоритетная поддержка', p3f4:'Настройка AI', p3f5:'Гарантия SLA',
+        plan1Name:'Мини', p1f1:'До 15 номеров', p1f2:'AI-чат для гостей 24/7', p1f3:'Трекер запросов', p1f4:'Telegram-уведомления',
+        plan2Name:'Стандарт', p2f1:'До 40 номеров', p2f2:'Всё из «Мини»', p2f3:'Роли персонала', p2f4:'Чат персонала', p2f5:'Аналитика',
+        plan3Name:'Резорт', p3f1:'Номера без лимита', p3f2:'Несколько объектов', p3f3:'Настройка AI под отель', p3f4:'Приоритетная поддержка',
         planCta:'Начать бесплатно',
+        earlyBadge:'🚀 ПРОГРАММА ПЕРВЫХ КЛИЕНТОВ', earlyTitle:'Первым 5 отелям — 6 месяцев бесплатно',
+        earlySub:'В обмен на честный отзыв и обратную связь. Никаких скрытых условий.', earlyCta:'Стать первым клиентом',
+        faqLabel:'FAQ', faqTitle:'Частые вопросы',
+        faq1Q:'Как подключиться?', faq1A:'Регистрируетесь, вставляете информацию об отеле (часы завтрака, пароль Wi-Fi, услуги), печатаете QR-коды для номеров — готово. Обычно это один вечер. Если что-то не получается — настроим за вас бесплатно.',
+        faq2Q:'Нужен ли программист?', faq2A:'Нет. Всё настраивается в браузере, как соцсеть. Единственный «код» — одна строка для виджета на сайт: скопировать и вставить. Нет сайта? Гости просто сканируют QR-код в номере.',
+        faq3Q:'Что если AI ошибётся?', faq3A:'AI отвечает только на основе информации, которую вы ему дали. Сложные и срочные вопросы он сразу передаёт персоналу — вам мгновенно приходит уведомление в Telegram. Все диалоги видны в панели.',
+        faq4Q:'Можно ли отменить подписку?', faq4A:'Да, в любой момент — без штрафов и лишних вопросов. Первые 30 дней бесплатно и без карты: не подошло — просто перестаёте пользоваться.',
         footerTagline:'AI-платформа управления отелем для современного гостиничного бизнеса.',
         footerProduct:'Продукт', footerFeatures:'Возможности', footerPricing:'Тарифы', footerRegister:'Регистрация', footerLogin:'Войти', footerContact:'Контакты',
         footerRights:'Все права защищены.',
@@ -400,7 +461,7 @@ const I18N = {
         navLogin:'Giriş', navRegister:'Kayıt Ol',
         heroBadge:'AI Destekli Otel Yönetimi',
         heroTitle1:'Akıllı Otel', heroTitle2:'Otomatik Pilot',
-        heroSub:'Misafirleriniz için 7/24 AI asistanı, personel yönetimi, analitik ve daha fazlası — hepsi tek panelde.',
+        heroSub:"Misafirlere saatler değil, saniyeler içinde yanıt verin — soruların %80'ini AI üstlenir.",
         heroCta1:'Ücretsiz Başla', heroCta2:'Giriş Yap', heroCtaVideo:'Videoyu izle',
         statAi:'AI Asistanı', statLang:'Dil', statFree:'Gün Ücretsiz Deneme',
         featLabel:'Özellikler', featTitle:'Otelinizin ihtiyacı olan her şey',
@@ -414,10 +475,17 @@ const I18N = {
         priceLabel:'Fiyatlandırma', priceTitle:'Basit, şeffaf fiyatlandırma',
         priceSub:'Tüm planlar 30 günlük ücretsiz deneme içerir. Kredi kartı gerekmez.',
         trialBadge:'30 Gün Ücretsiz', popularBadge:'EN POPÜLER', planMo:'aylık',
-        plan1Name:'Başlangıç', p1f1:'500 mesaj / ay', p1f2:'1 mülk', p1f3:'AI misafir sohbeti', p1f4:'Telegram ve Email bildirimleri', p1f5:'Talep yönetimi',
-        plan2Name:'Pro', p2f1:'2.000 mesaj / ay', p2f2:'Tüm Başlangıç özellikleri', p2f3:'Çoklu personel rolleri', p2f4:'Analitik ve grafikler', p2f5:'Personel sohbeti',
-        plan3Name:'Premium', p3f1:'Sınırsız mesaj', p3f2:'Birden fazla mülk', p3f3:'Öncelikli destek', p3f4:'Özel AI eğitimi', p3f5:'SLA garantisi',
+        plan1Name:'Mini', p1f1:'15 odaya kadar', p1f2:'7/24 AI misafir sohbeti', p1f3:'Talep takipçisi', p1f4:'Telegram bildirimleri',
+        plan2Name:'Standart', p2f1:'40 odaya kadar', p2f2:"Mini'deki her şey", p2f3:'Personel rolleri', p2f4:'Personel sohbeti', p2f5:'Analitik',
+        plan3Name:'Resort', p3f1:'Sınırsız oda', p3f2:'Birden fazla mülk', p3f3:'Özel AI kurulumu', p3f4:'Öncelikli destek',
         planCta:'Ücretsiz Denemeyi Başlat',
+        earlyBadge:'🚀 İLK MÜŞTERİ PROGRAMI', earlyTitle:'İlk 5 otele 6 ay ücretsiz',
+        earlySub:'Dürüst bir yorum ve geri bildirim karşılığında. Gizli şart yok.', earlyCta:'İlk müşteri olun',
+        faqLabel:'SSS', faqTitle:'Sık sorulan sorular',
+        faq1Q:'Nasıl başlarım?', faq1A:'Kayıt olun, otel bilgilerinizi girin (kahvaltı saatleri, Wi-Fi şifresi, hizmetler), oda QR kodlarını yazdırın — bitti. Çoğu otel bir akşamda hazır olur. Takılırsanız kurulumu sizin için ücretsiz yaparız.',
+        faq2Q:'Programcıya ihtiyacım var mı?', faq2A:"Hayır. Her şey tarayıcıda ayarlanır, sosyal medya gibi. Tek \\\"kod\\\" web sitesi widget'ı için bir satır — kopyala, yapıştır. Siteniz yok mu? Misafirler odadaki QR kodu okutur.",
+        faq3Q:'AI hata yaparsa ne olur?', faq3A:'AI yalnızca ona verdiğiniz bilgilere göre yanıt verir. Karmaşık veya acil konuları hemen personele iletir — Telegram bildirimi anında gelir. Tüm konuşmalar panelde görünür.',
+        faq4Q:'İstediğim zaman iptal edebilir miyim?', faq4A:'Evet — istediğiniz an, ceza yok, soru yok. İlk 30 gün kartsız ve ücretsiz: size göre değilse kullanmayı bırakmanız yeterli.',
         footerTagline:'Modern konaklama için AI destekli otel yönetim platformu.',
         footerProduct:'Ürün', footerFeatures:'Özellikler', footerPricing:'Fiyatlar', footerRegister:'Kayıt Ol', footerLogin:'Giriş', footerContact:'İletişim',
         footerRights:'Tüm hakları saklıdır.',
@@ -427,7 +495,7 @@ const I18N = {
         navLogin:'Kirish', navRegister:"Ro'yxatdan o'tish",
         heroBadge:"AI-Asosida Mehmonxona Boshqaruvi",
         heroTitle1:'Aqlli Mehmonxona', heroTitle2:'Avtopilatda',
-        heroSub:"Mehmonlaringiz uchun 24/7 AI yordamchi, xodimlarni boshqarish, analitika va boshqalar — bitta panelda.",
+        heroSub:"Mehmonlarga soatlab emas, soniyalarda javob bering — savollarning 80 foizini AI o'z zimmasiga oladi.",
         heroCta1:'Bepul Boshlash', heroCta2:'Kirish', heroCtaVideo:'Videoni ko‘rish',
         statAi:'AI Yordamchi', statLang:'Tillar', statFree:'Kun Bepul Sinov',
         featLabel:'Imkoniyatlar', featTitle:"Mehmonxonangizga kerak bo'lgan hamma narsa",
@@ -441,10 +509,17 @@ const I18N = {
         priceLabel:'Narxlar', priceTitle:'Oddiy, shaffof narxlar',
         priceSub:"Barcha rejalar 30 kunlik bepul sinovni o'z ichiga oladi. Kredit karta shart emas.",
         trialBadge:'30 Kun Bepul', popularBadge:'ENG MASHHUR', planMo:'oyiga',
-        plan1Name:"Boshlang'ich", p1f1:'500 xabar / oy', p1f2:'1 obyekt', p1f3:'AI mehmon chati', p1f4:'Telegram va Email bildirishnomalar', p1f5:"So'rovlarni boshqarish",
-        plan2Name:'Pro', p2f1:'2 000 xabar / oy', p2f2:"Barcha Boshlang'ich imkoniyatlar", p2f3:"Ko'p xodim rollari", p2f4:'Analitika va grafiklar', p2f5:'Xodimlar chati',
-        plan3Name:'Premium', p3f1:'Cheksiz xabarlar', p3f2:'Bir nechta obyekt', p3f3:"Ustuvor qo'llab-quvvatlash", p3f4:"Maxsus AI o'qitish", p3f5:'SLA kafolati',
+        plan1Name:'Mini', p1f1:'15 tagacha xona', p1f2:'24/7 AI mehmon chati', p1f3:"So'rovlar kuzatuvchisi", p1f4:'Telegram bildirishnomalari',
+        plan2Name:'Standart', p2f1:'40 tagacha xona', p2f2:"Mini'dagi hammasi", p2f3:'Xodim rollari', p2f4:'Xodimlar chati', p2f5:'Analitika',
+        plan3Name:'Resort', p3f1:'Cheksiz xonalar', p3f2:'Bir nechta obyekt', p3f3:'AI maxsus sozlash', p3f4:"Ustuvor qo'llab-quvvatlash",
         planCta:'Bepul Sinovni Boshlash',
+        earlyBadge:'🚀 BIRINCHI MIJOZLAR DASTURI', earlyTitle:'Birinchi 5 mehmonxonaga — 6 oy bepul',
+        earlySub:"Halol fikr va sharh evaziga. Yashirin shartlar yo'q.", earlyCta:"Birinchi mijoz bo'lish",
+        faqLabel:'FAQ', faqTitle:"Ko'p so'raladigan savollar",
+        faq1Q:'Qanday boshlash mumkin?', faq1A:"Ro'yxatdan o'ting, mehmonxona ma'lumotlarini kiriting (nonushta vaqti, Wi-Fi paroli, xizmatlar), xonalar uchun QR kodlarni chop eting — tayyor. Odatda bu bir oqshom ish. Qiynalsangiz — bepul sozlab beramiz.",
+        faq2Q:'Dasturchi kerakmi?', faq2A:"Yo'q. Hammasi brauzerda sozlanadi, ijtimoiy tarmoq kabi. Yagona «kod» — sayt vidjeti uchun bir qator: nusxalab qo'yasiz. Sayt yo'qmi? Mehmonlar xonadagi QR kodni skanerlaydi.",
+        faq3Q:'AI xato qilsa-chi?', faq3A:"AI faqat siz bergan ma'lumotlar asosida javob beradi. Murakkab yoki shoshilinch savollarni darhol xodimlarga uzatadi — Telegram'ga bildirishnoma keladi. Barcha suhbatlar panelda ko'rinadi.",
+        faq4Q:'Obunani bekor qilish mumkinmi?', faq4A:"Ha, istalgan vaqtda — jarima va ortiqcha savollarsiz. Birinchi 30 kun kartasiz va bepul: yoqmasa, shunchaki foydalanishni to'xtatasiz.",
         footerTagline:'Zamonaviy mehmonxona uchun AI asosidagi boshqaruv platformasi.',
         footerProduct:'Mahsulot', footerFeatures:'Imkoniyatlar', footerPricing:'Narxlar', footerRegister:"Ro'yxatdan o'tish", footerLogin:'Kirish', footerContact:'Aloqa',
         footerRights:'Barcha huquqlar himoyalangan.',
@@ -463,9 +538,11 @@ const TRANS_IDS = [
     'f1Title','f1Desc','f2Title','f2Desc','f3Title','f3Desc',
     'f4Title','f4Desc','f5Title','f5Desc','f6Title','f6Desc',
     'priceLabel','priceTitle','priceSub','popularBadge',
-    'plan1Name','p1f1','p1f2','p1f3','p1f4','p1f5',
+    'plan1Name','p1f1','p1f2','p1f3','p1f4',
     'plan2Name','p2f1','p2f2','p2f3','p2f4','p2f5',
-    'plan3Name','p3f1','p3f2','p3f3','p3f4','p3f5',
+    'plan3Name','p3f1','p3f2','p3f3','p3f4',
+    'earlyBadge','earlyTitle','earlySub','earlyCta',
+    'faqLabel','faqTitle','faq1Q','faq1A','faq2Q','faq2A','faq3Q','faq3A','faq4Q','faq4A',
     'footerTagline','footerProduct','footerFeatures','footerPricing',
     'footerRegister','footerLogin','footerContact','footerRights',
     'lmEn','lmRu','lmTr','lmUz','currentLangLabel'

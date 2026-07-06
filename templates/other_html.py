@@ -690,9 +690,9 @@ EDIT_HTML = """
         // ===== BILLING =====
         function planDetails() {
             return {
-                starter: { label: '⭐ Starter', price: '$299' + ET('bilPerMonth'), features: ET('featStarter') },
-                pro:     { label: '🚀 Pro',     price: '$599' + ET('bilPerMonth'), features: ET('featPro') },
-                premium: { label: '🏆 Premium', price: '$999' + ET('bilPerMonth'), features: ET('featPremium') },
+                starter: { label: '🏠 ' + ET('planMiniName'),   price: '$49'  + ET('bilPerMonth'), features: ET('featStarter') },
+                pro:     { label: '⭐ ' + ET('planStdName'),    price: '$129' + ET('bilPerMonth'), features: ET('featPro') },
+                premium: { label: '🏝 ' + ET('planResortName'), price: '$299' + ET('bilPerMonth'), features: ET('featPremium') },
             };
         }
 
@@ -700,7 +700,7 @@ EDIT_HTML = """
             try {
                 const d = await fetch('/api/hotel/' + slug + '/billing/info', {credentials:'include'}).then(r => r.json());
                 const currentPlan = d.plan || 'trial';
-                const planLabels = { trial: ET('bilTrial'), starter: 'Starter', pro: 'Pro', premium: 'Premium' };
+                const planLabels = { trial: ET('bilTrial'), starter: ET('planMiniName'), pro: ET('planStdName'), premium: ET('planResortName') };
                 document.getElementById('planNameEl').textContent = planLabels[currentPlan] || currentPlan;
 
                 const statusEl = document.getElementById('stripeStatusEl');
@@ -821,9 +821,10 @@ EDIT_HTML = """
                 bilChoose:'Upgrade →', bilNotConfigured:'Not configured', bilPerMonth:'/mo', bilCheckoutFail:'Checkout failed',
                 bilStripeNotice:'💡 Stripe is not configured yet. Add STRIPE_SECRET_KEY and price IDs to the .env file.',
                 bilStActive:'✅ Active subscription', bilStPastDue:'⚠️ Payment overdue', bilStCanceled:'❌ Canceled',
-                featStarter:['2,000 messages/mo','Telegram + Email','Guest tracking','Request management'],
-                featPro:['10,000 messages/mo','All features','Multi-staff','Analytics'],
-                featPremium:['Unlimited messages','Priority support','Custom AI training','SLA guarantee'],
+                planMiniName:'Mini', planStdName:'Standard', planResortName:'Resort',
+                featStarter:['Up to 15 rooms','AI guest chat 24/7','Request tracker','Telegram notifications'],
+                featPro:['Up to 40 rooms','Everything in Mini','Staff roles','Staff chat','Analytics'],
+                featPremium:['Unlimited rooms','Multiple properties','Custom AI setup','Priority support'],
             },
             ru: {
                 editBack:'← Назад', editSub:'Редактировать настройки отеля',
@@ -855,9 +856,10 @@ EDIT_HTML = """
                 bilChoose:'Перейти →', bilNotConfigured:'Не настроено', bilPerMonth:'/мес', bilCheckoutFail:'Не удалось открыть оплату',
                 bilStripeNotice:'💡 Stripe ещё не настроен. Добавьте STRIPE_SECRET_KEY и ID цен в файл .env.',
                 bilStActive:'✅ Подписка активна', bilStPastDue:'⚠️ Платёж просрочен', bilStCanceled:'❌ Отменена',
-                featStarter:['2 000 сообщений/мес','Telegram + Email','Учёт гостей','Управление заявками'],
-                featPro:['10 000 сообщений/мес','Все функции','Мультиперсонал','Аналитика'],
-                featPremium:['Безлимит сообщений','Приоритетная поддержка','Кастомное обучение AI','Гарантия SLA'],
+                planMiniName:'Мини', planStdName:'Стандарт', planResortName:'Резорт',
+                featStarter:['До 15 номеров','AI-чат для гостей 24/7','Трекер запросов','Telegram-уведомления'],
+                featPro:['До 40 номеров','Всё из «Мини»','Роли персонала','Чат персонала','Аналитика'],
+                featPremium:['Номера без лимита','Несколько объектов','Настройка AI под отель','Приоритетная поддержка'],
             },
             tr: {
                 editBack:'← Panele Dön', editSub:'Otel ayarlarını düzenle',
@@ -889,9 +891,10 @@ EDIT_HTML = """
                 bilChoose:'Geç →', bilNotConfigured:'Yapılandırılmadı', bilPerMonth:'/ay', bilCheckoutFail:'Checkout başarısız',
                 bilStripeNotice:"💡 Stripe henüz yapılandırılmadı. STRIPE_SECRET_KEY ve fiyat ID'lerini .env dosyasına ekleyin.",
                 bilStActive:'✅ Aktif abonelik', bilStPastDue:'⚠️ Ödeme gecikmiş', bilStCanceled:'❌ İptal edildi',
-                featStarter:['2 000 mesaj/ay','Telegram + Email','Misafir takibi','Talep yönetimi'],
-                featPro:['10 000 mesaj/ay','Tüm özellikler','Multi-personel','Analitik'],
-                featPremium:['Sınırsız mesaj','Öncelikli destek','Özel AI eğitimi','SLA garantisi'],
+                planMiniName:'Mini', planStdName:'Standart', planResortName:'Resort',
+                featStarter:['15 odaya kadar','7/24 AI misafir sohbeti','Talep takipçisi','Telegram bildirimleri'],
+                featPro:['40 odaya kadar',"Mini'deki her şey",'Personel rolleri','Personel sohbeti','Analitik'],
+                featPremium:['Sınırsız oda','Birden fazla mülk','Özel AI kurulumu','Öncelikli destek'],
             },
             uz: {
                 editBack:'← Panelga qaytish', editSub:"Mehmonxona sozlamalarini tahrirlash",
@@ -923,9 +926,10 @@ EDIT_HTML = """
                 bilChoose:"O'tish →", bilNotConfigured:'Sozlanmagan', bilPerMonth:'/oy', bilCheckoutFail:"To'lovni ochib bo'lmadi",
                 bilStripeNotice:"💡 Stripe hali sozlanmagan. STRIPE_SECRET_KEY va narx IDlarini .env fayliga qo'shing.",
                 bilStActive:'✅ Faol obuna', bilStPastDue:"⚠️ To'lov kechikkan", bilStCanceled:'❌ Bekor qilingan',
-                featStarter:['2 000 xabar/oy','Telegram + Email','Mehmonlarni kuzatish',"So'rovlarni boshqarish"],
-                featPro:['10 000 xabar/oy','Barcha funksiyalar',"Ko'p xodim",'Analitika'],
-                featPremium:['Cheksiz xabar','Ustuvor yordam',"Maxsus AI o'rgatish",'SLA kafolati'],
+                planMiniName:'Mini', planStdName:'Standart', planResortName:'Resort',
+                featStarter:['15 tagacha xona','24/7 AI mehmon chati',"So'rovlar kuzatuvchisi",'Telegram bildirishnomalari'],
+                featPro:['40 tagacha xona',"Mini'dagi hammasi",'Xodim rollari','Xodimlar chati','Analitika'],
+                featPremium:['Cheksiz xonalar','Bir nechta obyekt','AI maxsus sozlash',"Ustuvor qo'llab-quvvatlash"],
             },
         };
         (function applyEditLang() {
