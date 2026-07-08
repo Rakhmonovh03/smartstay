@@ -385,7 +385,7 @@ DASHBOARD_HTML = """
         .an-title {{ font-size:11px; color:var(--text3); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:16px; }}
         /* Rating distribution */
         .dist-row {{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }}
-        .dist-star {{ font-size:13px; color:var(--gold); width:28px; flex-shrink:0; text-align:right; }}
+        .dist-star {{ font-size:13px; color:var(--gold); width:72px; flex-shrink:0; text-align:right; white-space:nowrap; }}
         .dist-track {{ flex:1; background:var(--bg3); border-radius:4px; height:10px; overflow:hidden; }}
         .dist-fill {{ height:100%; border-radius:4px; background:linear-gradient(90deg,#C9A84C,#E8C96A); transition:width 0.6s ease; }}
         .dist-fill.low {{ background:linear-gradient(90deg,#E05555,#ff7070); }}
@@ -2870,7 +2870,7 @@ DASHBOARD_HTML = """
 
                 // Horizontal bar: top categories
                 if (d.top_categories && d.top_categories.length) {{
-                    const catLabels = d.top_categories.map(c => c.category.replace(/_/g,' '));
+                    const catLabels = d.top_categories.map(c => _reqCatLabel(c.category));
                     const catCounts = d.top_categories.map(c => c.count);
                     _mkChart('chartCategories', 'bar', catLabels, [{{
                         label: AL.chartLblRequests, data: catCounts,
